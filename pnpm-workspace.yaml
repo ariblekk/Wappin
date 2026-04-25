@@ -1,0 +1,7 @@
+allowBuilds:
+  '@whiskeysockets/baileys': false
+  baileys: false
+  msw: false
+  protobufjs: false
+  sharp: false
+  unrs-resolver: false
