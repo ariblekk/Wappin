@@ -7,7 +7,9 @@ import {
   Users,
   MessageSquare,
   AlertCircle,
-  Loader2
+  Loader2,
+  ChevronDown,
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,6 +37,12 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Contact2 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface Device {
   $id: string
@@ -64,6 +72,8 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
     recipients: "",
     message: ""
   })
+  const [sendOption, setSendOption] = React.useState<'now' | 'scheduled'>('now')
+  const [scheduleTime, setScheduleTime] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [selectedContacts, setSelectedContacts] = React.useState<string[]>([])
 
@@ -109,12 +119,36 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
       return
     }
 
+    if (sendOption === 'scheduled' && !scheduleTime) {
+      toast.error("Silakan pilih waktu jadwal")
+      return
+    }
+
     setLoading(true)
+
+    // Dispatch optimistic event
+    const totalRecipients = formData.recipients.split('\n').map(r => r.trim()).filter(Boolean).length
+    const optimisticBroadcast = {
+      $id: `temp-${Date.now()}`,
+      name: formData.name,
+      message: formData.message,
+      status: sendOption === 'scheduled' ? 'pending' : 'processing',
+      total: totalRecipients,
+      sent: 0,
+      failed: 0,
+      $createdAt: new Date().toISOString()
+    }
+    window.dispatchEvent(new CustomEvent('optimistic-broadcast', { detail: optimisticBroadcast }))
+
     try {
-      const res = await createBroadcast(formData)
+      const res = await createBroadcast({
+        ...formData,
+        scheduleTime: sendOption === 'scheduled' ? scheduleTime : undefined
+      })
       if (res.success) {
-        toast.success("Broadcast telah dimulai!")
+        toast.success(sendOption === 'scheduled' ? "Broadcast telah dijadwalkan!" : "Broadcast telah dimulai!")
         setFormData({ ...formData, name: "", recipients: "", message: "" })
+        setScheduleTime("")
         router.refresh()
       } else {
         toast.error(res.error || "Gagal membuat broadcast")
@@ -294,23 +328,65 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full text-md font-bold"
-              disabled={loading || connectedDevices.length === 0}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                <>
-                  <Send className="h-5 w-5" />
-                  Kirim Broadcast Sekarang
-                </>
-              )}
-            </Button>
+            {sendOption === 'scheduled' && (
+              <div className="space-y-2 animate-in fade-in-50 duration-200">
+                <Label htmlFor="scheduleTime" className="flex items-center gap-2">
+                  <Calendar className="size-4 text-primary" />
+                  Waktu Pengiriman
+                </Label>
+                <Input
+                  id="scheduleTime"
+                  type="datetime-local"
+                  className="h-11 focus-visible:ring-primary/20"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 text-md font-bold h-11"
+                disabled={loading || connectedDevices.length === 0}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5" />
+                    {sendOption === 'now' ? 'Kirim Broadcast Sekarang' : 'Jadwalkan Broadcast'}
+                  </>
+                )}
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="px-3 h-11 border-primary/20 hover:bg-primary/5"
+                    disabled={loading || connectedDevices.length === 0}
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[200px]">
+                  <DropdownMenuItem onClick={() => setSendOption('now')} className="flex items-center gap-2 cursor-pointer">
+                    <Send className="size-4" />
+                    <span>Kirim Sekarang</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSendOption('scheduled')} className="flex items-center gap-2 cursor-pointer">
+                    <Calendar className="size-4" />
+                    <span>Jadwalkan</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardContent>
         </Card>
       </div>

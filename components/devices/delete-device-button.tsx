@@ -4,11 +4,11 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Trash2, Loader2 } from "lucide-react"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog"
@@ -33,13 +33,14 @@ export function DeleteDeviceButton({ deviceId, deviceName }: { deviceId: string,
 
   return (
     <>
-      <Button 
-        variant="destructive" 
-        size="sm" 
-        className="h-9 px-3"
+      <Button
+        variant="destructive"
+        size="sm"
+        className="h-9 px-3 gap-1.5"
         onClick={() => setOpen(true)}
       >
         <Trash2 className="size-4" />
+        Hapus Perangkat
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

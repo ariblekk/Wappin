@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Plus, History, Webhook, Send, ArrowLeft } from "lucide-react"
+import { Plus, Send, ArrowLeft } from "lucide-react"
 import { AddDeviceDialog } from "./devices/add-device-dialog"
 import { TestMessageDialog } from "./devices/test-message-dialog"
 import { getDevice, getDevices } from "@/app/actions/devices"
@@ -58,8 +58,8 @@ export function HeaderActions() {
   if (isDetailPage && currentDeviceId) {
     return (
       <div className="flex items-center gap-2 ml-auto">
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           className="h-9 gap-2"
           onClick={() => setIsTestOpen(true)}
         >
@@ -89,16 +89,8 @@ export function HeaderActions() {
   if (pathname === "/dashboard/devices") {
     return (
       <div className="flex items-center gap-2 ml-auto">
-        <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
-          <History className="size-4" />
-          Riwayat Pesan
-        </Button>
-        <Button variant="outline" size="sm" className="gap-2 hidden sm:flex">
-          <Webhook className="size-4" />
-          Webhook Logs
-        </Button>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           className="gap-2 shadow-sm"
           onClick={() => setIsAddDeviceOpen(true)}
         >
@@ -106,9 +98,9 @@ export function HeaderActions() {
           Tambah Akun
         </Button>
 
-        <AddDeviceDialog 
-          open={isAddDeviceOpen} 
-          onOpenChange={setIsAddDeviceOpen} 
+        <AddDeviceDialog
+          open={isAddDeviceOpen}
+          onOpenChange={setIsAddDeviceOpen}
         />
       </div>
     )

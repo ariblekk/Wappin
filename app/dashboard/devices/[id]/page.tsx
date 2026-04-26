@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { getDevice } from "@/app/actions/devices"
+import { getDevice, getDeviceMessages } from "@/app/actions/devices"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react"
 import { DeviceActionButton } from "@/components/devices/device-action-button"
+import { MessageLogTable, type MessageDocument } from "@/components/devices/message-log-table"
 
 interface Device {
   $id: string
@@ -34,13 +35,18 @@ export default async function DeviceDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const res = await getDevice(id)
+  
+  const [res, msgRes] = await Promise.all([
+    getDevice(id),
+    getDeviceMessages(id)
+  ])
 
   if (!res.success || !res.device) {
     notFound()
   }
 
   const device = res.device as unknown as Device
+  const messages = msgRes.success ? msgRes.messages : []
 
   const statusConfig = {
     connected: { label: "Terhubung", className: "bg-green-50 text-green-700 border-green-200" },
@@ -170,15 +176,7 @@ export default async function DeviceDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-                  <div className="size-14 rounded-full bg-muted flex items-center justify-center">
-                    <MessageSquare className="size-7 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm font-medium">Belum ada pesan</p>
-                  <p className="text-xs text-muted-foreground max-w-xs">
-                    Riwayat pesan yang dikirim melalui perangkat ini akan muncul di sini.
-                  </p>
-                </div>
+                <MessageLogTable initialMessages={messages as unknown as MessageDocument[]} deviceId={device.$id} />
               </CardContent>
             </Card>
           </TabsContent>

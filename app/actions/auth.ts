@@ -14,6 +14,16 @@ export const getLoggedInUser = cache(async () => {
     }
 });
 
+export async function getAppwriteJWT() {
+    try {
+        const { account } = await createSessionClient();
+        const jwt = await account.createJWT();
+        return { success: true, jwt: jwt.jwt };
+    } catch {
+        return { success: false };
+    }
+}
+
 export async function sendOtp(email: string) {
     try {
         const { account } = await createAdminClient();

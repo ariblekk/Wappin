@@ -96,16 +96,11 @@ export default async function DevicesPage() {
                   deviceName={device.name}
                   status={device.status}
                 />
-                <Button variant="outline" size="sm" className="h-9" asChild>
+                <Button variant="outline" size="sm" className="h-9 px-3 gap-1.5" asChild>
                   <Link href={`/dashboard/devices/${device.$id}`}>Detail</Link>
                 </Button>
                 <DeleteDeviceButton deviceId={device.$id} deviceName={device.name} />
               </CardFooter>
-              <div className="px-6 pb-6 pt-0">
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Kelola webhook, ubah nama, test kirim, dan lainnya tersedia di halaman Detail.
-                </p>
-              </div>
             </Card>
           ))}
         </div>

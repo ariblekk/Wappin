@@ -47,13 +47,41 @@ interface AutoReplyListProps {
   devices: Device[]
 }
 
-export function AutoReplyList({ replies, devices }: AutoReplyListProps) {
+export function AutoReplyList({ replies: initialReplies, devices }: AutoReplyListProps) {
+  const [replies, setReplies] = React.useState(initialReplies)
+  const [prevInitialReplies, setPrevInitialReplies] = React.useState(initialReplies)
+
+  if (initialReplies !== prevInitialReplies) {
+    setPrevInitialReplies(initialReplies)
+    setReplies(initialReplies)
+  }
+
+  React.useEffect(() => {
+    const handleOptimistic = (e: Event) => {
+      const customEvent = e as CustomEvent<{ action: string, data: AutoReply }>
+      const { action, data } = customEvent.detail
+      
+      if (action === 'create') {
+        setReplies(prev => [data, ...prev])
+      } else if (action === 'update') {
+        setReplies(prev => prev.map(r => r.$id === data.$id ? data : r))
+      }
+    }
+    
+    window.addEventListener('optimistic-autoreply', handleOptimistic)
+    return () => window.removeEventListener('optimistic-autoreply', handleOptimistic)
+  }, [])
+
   async function handleDelete(id: string) {
+    // Optimistic delete
+    setReplies(prev => prev.filter(r => r.$id !== id))
+    
     const res = await deleteAutoReply(id)
     if (res.success) {
       toast.success("Aturan dihapus")
     } else {
       toast.error(res.error || "Gagal menghapus")
+      setReplies(initialReplies) // Revert if failed
     }
   }
 

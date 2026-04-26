@@ -37,6 +37,7 @@ export async function createBroadcast(formData: {
     name: string;
     message: string;
     recipients: string;
+    scheduleTime?: string;
 }) {
     try {
         const user = await getLoggedInUser();
@@ -52,6 +53,12 @@ export async function createBroadcast(formData: {
 
         if (recipientList.length === 0) throw new Error("No recipients provided");
 
+        const isScheduled = !!formData.scheduleTime;
+        const status = isScheduled ? "pending" : "processing";
+        const timestamp = isScheduled 
+            ? Math.floor(new Date(formData.scheduleTime!).getTime() / 1000) 
+            : Math.floor(Date.now() / 1000);
+
         // Create the broadcast record
         const broadcast = await databases.createDocument(
             DB_ID,
@@ -65,11 +72,11 @@ export async function createBroadcast(formData: {
                 message: formData.message,
                 body: formData.message, // Map to body for compatibility
                 recipients: JSON.stringify(recipientList),
-                status: "processing",
+                status: status,
                 total: recipientList.length,
                 sent: 0,
                 failed: 0,
-                timestamp: Math.floor(Date.now() / 1000)
+                timestamp: timestamp
             },
             [
                 Permission.read(Role.user(user.$id)),
@@ -78,10 +85,10 @@ export async function createBroadcast(formData: {
             ]
         );
 
-        // Start sending in background (Baileys might need some delay between messages)
-        // Note: In Next.js server actions, this will still block until finished 
-        // unless we use a proper job queue. For now, we'll just run it.
-        processBroadcast(broadcast.$id, formData.deviceId, formData.message, recipientList);
+        // Start sending in background if not scheduled
+        if (!isScheduled) {
+            processBroadcast(broadcast.$id, formData.deviceId, formData.message, recipientList);
+        }
 
         return { success: true, broadcastId: broadcast.$id };
     } catch (error) {
@@ -90,23 +97,23 @@ export async function createBroadcast(formData: {
     }
 }
 
-async function processBroadcast(
+export async function processBroadcast(
     broadcastId: string, 
     deviceId: string, 
     message: string, 
     recipients: string[]
 ) {
-    console.log(`[Broadcast ${broadcastId}] Starting process for ${recipients.length} recipients...`);
+
     const { databases } = await createAdminClient();
     let sentCount = 0;
     let failedCount = 0;
 
     for (const recipient of recipients) {
-        console.log(`[Broadcast ${broadcastId}] Sending to ${recipient}...`);
+
         try {
             await sendMessage(deviceId, recipient, message);
             sentCount++;
-            console.log(`[Broadcast ${broadcastId}] Success for ${recipient}`);
+
         } catch (error) {
             console.error(`[Broadcast ${broadcastId}] Failed for ${recipient}:`, error);
             failedCount++;
@@ -124,13 +131,13 @@ async function processBroadcast(
 
         // Delay to avoid being flagged as spam (2-5 seconds)
         if (sentCount + failedCount < recipients.length) {
-            console.log(`[Broadcast ${broadcastId}] Sleeping...`);
+
             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
         }
     }
 
     // Mark as completed
-    console.log(`[Broadcast ${broadcastId}] Marking as completed. Total sent: ${sentCount}, failed: ${failedCount}`);
+
     try {
         await databases.updateDocument(DB_ID, COL_ID, broadcastId, {
             status: "completed"
@@ -138,4 +145,52 @@ async function processBroadcast(
     } catch (e) {
         console.error(`[Broadcast ${broadcastId}] Failed to mark as completed:`, e);
     }
+}
+
+let workerStarted = false;
+
+function startBroadcastWorker() {
+    if (workerStarted) return;
+    workerStarted = true;
+
+    // Jalankan setiap 30 detik
+    setInterval(async () => {
+        try {
+            const { databases } = await createAdminClient();
+            const now = Math.floor(Date.now() / 1000);
+
+            // Cari broadcast yang dijadwalkan dan sudah jatuh tempo
+            const scheduledBroadcasts = await databases.listDocuments(
+                DB_ID,
+                COL_ID,
+                [
+                    Query.equal("status", "pending"),
+                    Query.lessThanEqual("timestamp", now),
+                    Query.limit(10)
+                ]
+            );
+
+            for (const doc of scheduledBroadcasts.documents) {
+                try {
+                    // Update status menjadi processing agar tidak diambil lagi oleh worker lain
+                    await databases.updateDocument(DB_ID, COL_ID, doc.$id, {
+                        status: "processing"
+                    });
+
+                    const recipients = JSON.parse(doc.recipients);
+                    // Jalankan proses broadcast di background
+                    processBroadcast(doc.$id, doc.deviceId, doc.message || doc.body, recipients);
+                } catch (err) {
+                    console.error(`[Worker] Gagal memproses broadcast terjadwal ${doc.$id}:`, err);
+                }
+            }
+        } catch {
+            // Abaikan error koneksi database berkala
+        }
+    }, 30000);
+}
+
+// Jalankan worker secara otomatis saat modul dimuat di server
+if (typeof window === 'undefined') {
+    startBroadcastWorker();
 }

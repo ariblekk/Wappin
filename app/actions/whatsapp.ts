@@ -50,8 +50,44 @@ export async function sendTestMessage(deviceId: string, to: string, text: string
             throw new Error("Forbidden");
         }
 
-        await sendMessage(deviceId, to, text);
-        return { success: true };
+        // Simpan log awal (pending)
+        const messageDoc = await databases.createDocument(
+            process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+            process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
+            'unique()',
+            {
+                deviceId: deviceId,
+                userId: user.$id,
+                to: to.replace(/[^0-9]/g, ''),
+                body: text,
+                status: 'pending',
+                sentAt: new Date().toISOString()
+            }
+        );
+
+        try {
+            await sendMessage(deviceId, to, text);
+            // Update status ke sent
+            await databases.updateDocument(
+                process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+                process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
+                messageDoc.$id,
+                { status: 'sent' }
+            );
+            return { success: true };
+        } catch (sendError) {
+            // Update status ke failed
+            await databases.updateDocument(
+                process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+                process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
+                messageDoc.$id,
+                { 
+                    status: 'failed',
+                    error: (sendError as Error).message.slice(0, 500)
+                }
+            );
+            throw sendError;
+        }
     } catch (error) {
         console.error("Error sending test message:", error);
         return { success: false, error: (error as Error).message };

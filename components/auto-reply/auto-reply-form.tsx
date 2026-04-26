@@ -58,6 +58,20 @@ export function AutoReplyForm({ devices, mode = "create", initialData }: AutoRep
     const type = formData.get("type") as "exact" | "contains"
     const deviceId = formData.get("deviceId") as string
 
+    // Optimistic UI Dispatch
+    const optimisticData = {
+      $id: isEdit && initialData ? initialData.$id : `temp-${Date.now()}`,
+      keyword,
+      response,
+      type,
+      deviceId,
+      $createdAt: new Date().toISOString()
+    }
+    window.dispatchEvent(new CustomEvent('optimistic-autoreply', { 
+      detail: { action: isEdit ? 'update' : 'create', data: optimisticData }
+    }))
+    setOpen(false) // Tutup instan
+    
     const res = isEdit && initialData
       ? await updateAutoReply(initialData.$id, { keyword, response, type, deviceId })
       : await createAutoReply({ keyword, response, type, deviceId })
@@ -65,7 +79,6 @@ export function AutoReplyForm({ devices, mode = "create", initialData }: AutoRep
     setLoading(false)
     if (res.success) {
       toast.success(isEdit ? "Auto Reply diperbarui" : "Auto Reply ditambahkan")
-      setOpen(false)
     } else {
       toast.error(res.error || "Terjadi kesalahan")
     }

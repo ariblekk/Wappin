@@ -33,6 +33,7 @@ export function TestMessageDialog({
   const [loading, setLoading] = React.useState(false)
   const [to, setTo] = React.useState("")
   const [message, setMessage] = React.useState("Halo, ini pesan test dari Wapping! 👋")
+  const [count, setCount] = React.useState(1)
 
   const handleSend = async () => {
     if (!to) {
@@ -43,18 +44,53 @@ export function TestMessageDialog({
     }
 
     setLoading(true)
-    const res = await sendTestMessage(deviceId, to, message)
+    let successCount = 0
+    let failCount = 0
+
+    try {
+      for (let i = 0; i < count; i++) {
+        // Dispatch optimistic message event
+        const tempId = `temp-${Date.now()}-${i}`
+        const optimisticMsg = {
+          detail: {
+            $id: tempId,
+            to: to.replace(/[^0-9]/g, ''),
+            body: message,
+            status: 'pending',
+            deviceId: deviceId,
+            sentAt: new Date().toISOString()
+          }
+        }
+        window.dispatchEvent(new CustomEvent('optimistic-message', optimisticMsg))
+
+        const res = await sendTestMessage(deviceId, to, message)
+        if (res.success) {
+          successCount++
+        } else {
+          failCount++
+        }
+        
+        // Jeda 1 detik antar pesan jika jumlahnya lebih dari 1
+        if (count > 1 && i < count - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+      }
+    } catch (error) {
+      console.error("Error sending test messages:", error)
+    }
+
     setLoading(false)
 
-    if (res.success) {
+    if (successCount > 0) {
       toast.success("Pesan Terkirim", {
-        description: `Pesan berhasil dikirim ke ${to}`,
+        description: `${successCount} pesan berhasil dikirim ke ${to}.${failCount > 0 ? ` (${failCount} gagal)` : ""}`,
       })
       onOpenChange(false)
       setTo("")
+      setCount(1) // Reset
     } else {
       toast.error("Gagal Mengirim Pesan", {
-        description: res.error || "Terjadi kesalahan saat mengirim pesan.",
+        description: "Terjadi kesalahan saat mengirim pesan.",
       })
     }
   }
@@ -96,7 +132,21 @@ export function TestMessageDialog({
               />
             </div>
 
-            {/* Message */}
+            {/* Jumlah Dikirim */}
+            <div className="space-y-2">
+              <Label htmlFor="count" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Jumlah yang Dikirim
+              </Label>
+              <Input
+                id="count"
+                type="number"
+                min={1}
+                max={100}
+                value={count}
+                onChange={(e) => setCount(Math.max(1, parseInt(e.target.value) || 1))}
+                className="h-11 rounded-xl"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="message" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Pesan

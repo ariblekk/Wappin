@@ -17,6 +17,7 @@ const COL_MESSAGES = process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID;
 const COL_BROADCASTS = process.env.NEXT_PUBLIC_APPWRITE_BROADCASTS_COLLECTION_ID;
 const COL_CONTACTS    = "contacts";
 const COL_AUTO_REPLY  = "auto_replies";
+const COL_PROFILES    = "profiles";
 const BUCKET_SESSIONS = process.env.NEXT_PUBLIC_APPWRITE_SESSIONS_BUCKET_ID || "sessions";
 
 // ─────────────────────────────────────────────────────────────
@@ -163,6 +164,15 @@ async function setupAutoReplies() {
     await attr(COL_AUTO_REPLY, 'userId', 'string', { size: 50, required: true });
 }
 
+async function setupProfiles() {
+    console.log('\n👤 Collection: profiles');
+    await createCollection(COL_PROFILES, 'Profiles');
+    await sleep(500);
+    await attr(COL_PROFILES, 'user_code', 'string', { size: 255, required: true });
+    await attr(COL_PROFILES, 'plan', 'string', { size: 50, required: true });
+    await attr(COL_PROFILES, 'apikey', 'string', { size: 255, required: true });
+}
+
 async function setupBuckets() {
     console.log('\n📁 Storage Buckets');
     await createBucket(BUCKET_SESSIONS, 'WhatsApp Sessions');
@@ -184,6 +194,7 @@ async function setup() {
     await setupBroadcasts();
     await setupContacts();
     await setupAutoReplies();
+    await setupProfiles();
     await setupBuckets();
 
     console.log('\n🚀 Setup selesai! Semua koleksi, atribut, dan bucket sudah siap.');

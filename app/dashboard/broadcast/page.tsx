@@ -31,7 +31,10 @@ export default async function BroadcastPage() {
 
         <section className="space-y-4">
           <h3 className="text-xl font-bold">Aktivitas Terakhir</h3>
-          <BroadcastHistory broadcasts={broadcasts as unknown as { $id: string; name?: string; message: string; status: string; total: number; sent: number; failed: number; $createdAt: string }[]} />
+          <BroadcastHistory 
+            broadcasts={broadcasts as any} 
+            devices={devices as any}
+          />
         </section>
       </div>
     </div>

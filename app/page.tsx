@@ -1,34 +1,16 @@
 import React from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { GalleryVerticalEndIcon, CheckCircle2, Zap, Shield, MessageSquare } from "lucide-react"
+import { CheckCircle2, Zap, Shield, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <GalleryVerticalEndIcon className="size-6 text-primary" />
-            <span>Wappin Clone</span>
-          </div>
-          <nav className="hidden md:flex gap-6 text-sm font-medium">
-            <Link href="#features" className="hover:text-primary transition-colors">Features</Link>
-            <Link href="#pricing" className="hover:text-primary transition-colors">Pricing</Link>
-            <Link href="/login" className="hover:text-primary transition-colors">Login</Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" className="hidden sm:flex">
-              <Link href="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/login">Get Started</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -47,8 +29,8 @@ export default function LandingPage() {
               <Button size="lg" asChild className="h-12 px-8">
                 <Link href="/login">Start Free Trial</Link>
               </Button>
-              <Button size="lg" variant="outline" className="h-12 px-8">
-                View Documentation
+              <Button size="lg" variant="outline" className="h-12 px-8" asChild>
+                <Link href="/docs">View Documentation</Link>
               </Button>
             </div>
           </div>
@@ -114,22 +96,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-12 bg-background">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <GalleryVerticalEndIcon className="size-6 text-primary" />
-            <span>Wappin Clone</span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            © 2024 Wappin Clone. All rights reserved.
-          </p>
-          <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Contact</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

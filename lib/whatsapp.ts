@@ -22,7 +22,7 @@ interface AppwriteDevice extends Models.Document {
     status: string;
 }
 
-const logger = pino({ level: 'warn' });
+
 
 
 const sessions = new Map<string, WASocket>();
@@ -39,16 +39,12 @@ export async function connectToWhatsApp(deviceId: string) {
     const COL_ID = process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!;
 
     // Ambil data perangkat dengan retry logic untuk mengatasi lag database
-    let deviceName = 'Web Browser';
-    let device: AppwriteDevice | null = null;
-    
     const fetchDeviceWithRetry = async (retries = 5, delay = 1000): Promise<AppwriteDevice | null> => {
         try {
             return await databases.getDocument(DB_ID, COL_ID, deviceId) as unknown as AppwriteDevice;
         } catch (e: unknown) {
             const appwriteErr = e as { code?: number };
             if (appwriteErr.code === 404 && retries > 0) {
-                console.log(`⚠️ Device ${deviceId} not found, retrying in ${delay}ms... (${retries} retries left)`);
                 await new Promise(res => setTimeout(res, delay));
                 return fetchDeviceWithRetry(retries - 1, delay * 2);
             }
@@ -57,8 +53,7 @@ export async function connectToWhatsApp(deviceId: string) {
     };
 
     try {
-        device = await fetchDeviceWithRetry();
-        if (device) deviceName = device.name;
+        await fetchDeviceWithRetry();
     } catch (e: unknown) {
         const appwriteErr = e as { code?: number };
         if (appwriteErr.code === 404) {
@@ -72,15 +67,26 @@ export async function connectToWhatsApp(deviceId: string) {
 
 
     const { state, saveCreds } = await getAppwriteAuthState(deviceId);
-    const version: [number, number, number] = [6, 7, 21];
 
+    // Ambil versi WhatsApp Web terbaru agar tidak diblokir
+    let version: [number, number, number] = [2, 3000, 1017571181]; // Fallback
+    try {
+        const { fetchLatestBaileysVersion } = await import('@whiskeysockets/baileys');
+        const { version: latestVersion } = await fetchLatestBaileysVersion();
+        version = latestVersion;
+    } catch (e) {
+        console.warn("⚠️ Gagal mengambil versi terbaru Baileys, menggunakan fallback:", e);
+    }
 
     const sock = makeWASocket({
         version,
         auth: state,
-        logger,
+        logger: pino({ level: 'silent' }),
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 30000,
         // Ini akan muncul di WhatsApp -> Linked Devices
-        browser: ['Wappin', `Wappin (${deviceName})`, '1.0.0']
+        browser: ['Wappin', `Wappin`, '1.0.0']
     });
 
     sessions.set(deviceId, sock);
@@ -89,20 +95,20 @@ export async function connectToWhatsApp(deviceId: string) {
 
     // Listen for new messages
     sock.ev.on('messages.upsert', async (m) => {
-        console.log(`[WA Event] messages.upsert type: ${m.type}`);
+
         if (m.type === 'notify') {
             for (const msg of m.messages) {
                 const jid = msg.key.remoteJid;
-                console.log(`[WA Message] Received from ${jid}. fromMe: ${msg.key.fromMe}`);
+
                 if (!jid || jid === 'status@broadcast' || msg.key.fromMe) continue;
 
                 const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-                console.log(`[WA Message] Body content: "${body}"`);
+
                 if (!body) continue;
 
                 // Auto Reply Logic
                 try {
-                    console.log(`[AutoReply] Checking rules for device: ${deviceId}`);
+
                     const { databases } = await createAdminClient();
                     const rules = await databases.listDocuments(
                         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -111,14 +117,14 @@ export async function connectToWhatsApp(deviceId: string) {
                             Query.equal("deviceId", deviceId)
                         ]
                     );
-                    console.log(`[AutoReply] Found ${rules.documents.length} rules in Appwrite.`);
+
 
                     for (const rule of rules.documents) {
                         let matched = false;
                         const keyword = rule.keyword.toLowerCase().trim();
                         const message = body.toLowerCase().trim();
 
-                        console.log(`[AutoReply] Testing rule: "${keyword}" (${rule.type}) against "${message}"`);
+
 
                         if (rule.type === 'exact') {
                             matched = message === keyword;
@@ -127,9 +133,9 @@ export async function connectToWhatsApp(deviceId: string) {
                         }
 
                         if (matched) {
-                            console.log(`[AutoReply] ✅ MATCH FOUND! Sending response: "${rule.response}"`);
+
                             await sock.sendMessage(jid, { text: rule.response });
-                            break; 
+                            break;
                         }
                     }
                 } catch (err) {
@@ -148,7 +154,14 @@ export async function connectToWhatsApp(deviceId: string) {
         const selfContact = contacts.find(c => c.id === selfId || c.id.split(':')[0] === selfId.split(':')[0]);
         if (!selfContact) return;
 
-        const waName = selfContact.notify || selfContact.name || '';
+        const contact = selfContact as unknown as {
+            pushName?: string;
+            pushname?: string;
+            notify?: string;
+            name?: string;
+            verifiedName?: string;
+        };
+        const waName = contact.pushName || contact.pushname || contact.notify || contact.name || contact.verifiedName || '';
         if (!waName) return;
 
         const { databases } = await createAdminClient();
@@ -168,12 +181,9 @@ export async function connectToWhatsApp(deviceId: string) {
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
-        
-        if (connection === 'close') {
-            const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-            console.log(`[WA Connection] Closed. Reason: ${statusCode}`);
-        }
-        
+
+
+
         const { databases } = await createAdminClient();
 
         if (qr) {
@@ -210,8 +220,23 @@ export async function connectToWhatsApp(deviceId: string) {
             const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
+            // Hapus session dari memori agar bisa membuat koneksi baru
+            sessions.delete(deviceId);
+
             if (shouldReconnect) {
-                console.log(`[WA Connection] Reconnecting device ${deviceId} in 5 seconds...`);
+
+
+                try {
+                    await databases.updateDocument(
+                        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+                        process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
+                        deviceId,
+                        { status: 'connecting' }
+                    );
+                } catch {
+                    // Abaikan jika gagal
+                }
+
                 setTimeout(async () => {
                     // Cek apakah dokumen masih ada sebelum reconnect
                     try {
@@ -222,13 +247,20 @@ export async function connectToWhatsApp(deviceId: string) {
                         );
                         connectToWhatsApp(deviceId);
                     } catch {
-                        console.log(`🚫 Device ${deviceId} no longer exists or inaccessible, stopping reconnection.`);
-                        sessions.delete(deviceId);
+
                     }
                 }, 5000);
             } else {
+                // Hapus folder session lokal jika di-logout
+                try {
+                    const sessionDir = path.join(process.cwd(), 'storage', 'whatsapp-sessions', deviceId);
+                    if (fs.existsSync(sessionDir)) {
+                        fs.rmSync(sessionDir, { recursive: true, force: true });
+                    }
+                } catch (error) {
+                    console.error(`Failed to delete local session on logout for ${deviceId}:`, error);
+                }
 
-                sessions.delete(deviceId);
                 try {
                     await databases.updateDocument(
                         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -262,8 +294,15 @@ export async function connectToWhatsApp(deviceId: string) {
                 // Update profil WA dengan retry (atribut baru butuh waktu untuk aktif di Appwrite)
                 const updateProfile = async (retries = 3, delay = 3000): Promise<void> => {
                     try {
-                        // notify = nama yang user set sendiri di WA (pushname)
-                        const waName = sock.user?.notify || sock.user?.name || '';
+                        // Coba ambil nama dari berbagai kemungkinan field Baileys
+                        const user = sock.user as unknown as {
+                            pushName?: string;
+                            pushname?: string;
+                            notify?: string;
+                            name?: string;
+                            verifiedName?: string;
+                        };
+                        const waName = user?.pushName || user?.pushname || user?.notify || user?.name || user?.verifiedName || '';
                         let waImage = '';
                         try {
                             if (sock.user?.id) {
@@ -278,7 +317,7 @@ export async function connectToWhatsApp(deviceId: string) {
                             deviceId,
                             { waName, waImage }
                         );
-                // Listen for new messages
+                        // Listen for new messages
 
                     } catch (e: unknown) {
                         const err = e as { code?: number; message?: string };
@@ -341,7 +380,8 @@ export async function sendMessage(deviceId: string, to: string, text: string) {
 
     // Helper untuk menunggu socket sampai status 'open'
     const waitForOpen = async (s: WASocket, timeout = 10000) => {
-        if (sessions.get(deviceId) === s) return s; // Sudah terdaftar di map = sudah pernah 'open'
+        // Sudah terdaftar DAN sock.user sudah ada = benar-benar siap kirim pesan
+        if (sessions.get(deviceId) === s && s.user) return s;
 
         return new Promise<WASocket>((resolve, reject) => {
             const timer = setTimeout(() => {
@@ -356,12 +396,14 @@ export async function sendMessage(deviceId: string, to: string, text: string) {
                     s.ev.off('connection.update', listener);
                     resolve(s);
                 } else if (connection === 'close') {
-                    // Jika close permanen saat menunggu, stop
                     const statusCode = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
+                    clearTimeout(timer);
+                    s.ev.off('connection.update', listener);
+                    
                     if (statusCode === DisconnectReason.loggedOut) {
-                        clearTimeout(timer);
-                        s.ev.off('connection.update', listener);
                         reject(new Error("Perangkat telah keluar (Logged Out)."));
+                    } else {
+                        reject(new Error("Koneksi ditutup oleh WhatsApp (Status: " + statusCode + ")."));
                     }
                 }
             };
@@ -370,8 +412,8 @@ export async function sendMessage(deviceId: string, to: string, text: string) {
     };
 
     try {
-        // Jika sock baru saja dibuat atau belum 'open', tunggu dulu
-        if (!sessions.has(deviceId)) {
+        // Tunggu sampai socket benar-benar siap (sock.user terdefinisi)
+        if (!sock.user) {
             sock = await waitForOpen(sock);
         }
 
@@ -382,9 +424,25 @@ export async function sendMessage(deviceId: string, to: string, text: string) {
         const error = err as Error & { output?: { statusCode?: number } };
         console.error(`[WA Send Error] ${deviceId}:`, error);
 
-        // Jika error karena connection closed, coba bersihkan session & lempar error
+        // Jika error karena connection closed, coba bersihkan session & reconnect SEKALI
         if (error.message?.includes('Closed') || error.output?.statusCode === 428) {
             sessions.delete(deviceId);
+            console.log(`[WA Retry] Koneksi terputus untuk device ${deviceId}. Mencoba menghubungkan ulang dalam 2 detik...`);
+            
+            try {
+                await new Promise(res => setTimeout(res, 2000));
+                const newSock = await connectToWhatsApp(deviceId);
+                if (newSock) {
+                    const readySock = await waitForOpen(newSock);
+                    const jid = to.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+                    await readySock.sendMessage(jid, { text });
+                    return { success: true };
+                }
+            } catch (retryError) {
+                console.error(`[WA Retry Failed] ${deviceId}:`, retryError);
+                throw new Error(`Gagal menghubungkan ulang WhatsApp. Pastikan nomor di HP Anda aktif.`);
+            }
+
             throw new Error("Koneksi terputus. Silakan coba lagi dalam beberapa saat.");
         }
 

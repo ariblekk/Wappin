@@ -152,3 +152,22 @@ export async function disconnectDevice(deviceId: string) {
         return { success: false, error: (error as Error).message };
     }
 }
+
+export async function getDeviceMessages(deviceId: string) {
+    try {
+        const { databases } = await createSessionClient();
+        const messages = await databases.listDocuments(
+            DB_ID,
+            process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
+            [
+                Query.equal("deviceId", deviceId),
+                Query.orderDesc("sentAt"),
+                Query.limit(50)
+            ]
+        );
+        return { success: true, messages: messages.documents };
+    } catch (error) {
+        console.error("Error fetching device messages:", error);
+        return { success: false, messages: [] };
+    }
+}

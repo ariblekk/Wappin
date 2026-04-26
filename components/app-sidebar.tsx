@@ -26,6 +26,7 @@ import {
   Settings,
   Search,
   Users,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -94,6 +95,11 @@ const data = {
     {
       title: "Pengaturan",
       items: [
+        {
+          title: "Akun & API",
+          url: "/dashboard/account",
+          icon: User,
+        },
         {
           title: "Langganan",
           url: "/dashboard/billing",
