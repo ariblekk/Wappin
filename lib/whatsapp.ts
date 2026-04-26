@@ -1,6 +1,9 @@
 import makeWASocket, {
     DisconnectReason,
-    WASocket
+    WASocket,
+    Browsers,
+    fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore
 } from '@whiskeysockets/baileys';
 
 import { Boom } from '@hapi/boom';
@@ -10,6 +13,16 @@ import pino from 'pino';
 import { Query, Models } from "node-appwrite";
 import fs from 'fs';
 import path from 'path';
+
+// Mock CacheStore untuk memenuhi interface Baileys tanpa library eksternal
+const msgRetryCounterCache = {
+    get: (key: string) => msgRetryCounterMap.get(key),
+    set: (key: string, value: number) => msgRetryCounterMap.set(key, value),
+    del: (key: string) => msgRetryCounterMap.delete(key),
+    flushAll: () => msgRetryCounterMap.clear()
+} as unknown as any;
+
+const msgRetryCounterMap = new Map<string, number>();
 
 
 
@@ -68,11 +81,14 @@ export async function connectToWhatsApp(deviceId: string) {
 
     const { state, saveCreds } = await getAppwriteAuthState(deviceId);
 
+    // Gunakan cache untuk signal key agar koneksi lebih stabil
+    const signalRepository = makeCacheableSignalKeyStore(state.keys, pino({ level: 'error' }));
+
     // Ambil versi WhatsApp Web terbaru agar tidak diblokir
     let version: [number, number, number] = [2, 3000, 1017571181]; // Fallback
     try {
-        const { fetchLatestBaileysVersion } = await import('@whiskeysockets/baileys');
-        const { version: latestVersion } = await fetchLatestBaileysVersion();
+        const { version: latestVersion, isLatest } = await fetchLatestBaileysVersion();
+        console.log(`Using WA v${latestVersion.join('.')}, isLatest: ${isLatest}`);
         version = latestVersion;
     } catch (e) {
         console.warn("⚠️ Gagal mengambil versi terbaru Baileys, menggunakan fallback:", e);
@@ -80,18 +96,46 @@ export async function connectToWhatsApp(deviceId: string) {
 
     const sock = makeWASocket({
         version,
-        auth: state,
-        logger: pino({ level: 'silent' }),
+        auth: {
+            creds: state.creds,
+            keys: signalRepository,
+        },
+        logger: pino({ level: 'error' }), // Ubah ke error untuk melihat issue penting
+        printQRInTerminal: false,
+        browser: Browsers.ubuntu('Chrome'), // Gunakan format standar yang lebih aman
         connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 30000,
-        // Ini akan muncul di WhatsApp -> Linked Devices
-        browser: ['Wappin', `Wappin`, '1.0.0']
+        defaultQueryTimeoutMs: 0, // 0 berarti tidak ada timeout untuk query (disarankan untuk stabilitas)
+        keepAliveIntervalMs: 15000, // Interval keep-alive yang optimal
+        generateHighQualityLinkPreview: true,
+        syncFullHistory: false, // Kurangi beban sync history
+        markOnlineOnConnect: true,
+        retryRequestDelayMs: 2000,
+        msgRetryCounterCache, // Tambahkan cache untuk retry pesan
+        // Hindari memproses pesan yang terlalu lama (backlog)
+        shouldIgnoreJid: (jid) => jid.endsWith('@g.us') && false, // Bisa disesuaikan jika ingin mengabaikan grup
     });
 
     sessions.set(deviceId, sock);
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', async (update) => {
+        await saveCreds();
+        
+        // Tangkap nama profil dari creds jika tersedia
+        if (update.me?.name) {
+            const waName = update.me.name;
+            const { databases } = await createAdminClient();
+            try {
+                await databases.updateDocument(
+                    process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+                    process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
+                    deviceId,
+                    { waName }
+                );
+            } catch {
+                // Abaikan jika gagal
+            }
+        }
+    });
 
     // Listen for new messages
     sock.ev.on('messages.upsert', async (m) => {
@@ -218,14 +262,37 @@ export async function connectToWhatsApp(deviceId: string) {
 
         if (connection === 'close') {
             const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+            const errorReason = (lastDisconnect?.error as Boom)?.output?.payload?.reason || (lastDisconnect?.error as unknown as { reason?: string })?.reason;
+            const isConflict = statusCode === DisconnectReason.connectionReplaced || 
+                              (statusCode === 440 && errorReason === 'conflict') ||
+                              lastDisconnect?.error?.message?.includes('replaced');
+
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && 
+                                  statusCode !== 401 && 
+                                  !isConflict;
+
+            console.log(`[WA] Connection closed for ${deviceId}. Reason: ${statusCode} (${errorReason}), Conflict: ${isConflict}, Reconnecting: ${shouldReconnect}`);
 
             // Hapus session dari memori agar bisa membuat koneksi baru
             sessions.delete(deviceId);
 
+            if (isConflict) {
+                console.warn(`[WA] Conflict detected for ${deviceId}. This session is active on another server/process. Aborting reconnect to prevent loop.`);
+                try {
+                    await databases.updateDocument(
+                        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+                        process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
+                        deviceId,
+                        { status: 'disconnected', qr: null }
+                    );
+                } catch {
+                    // Abaikan jika gagal
+                }
+                return; // Berhenti di sini untuk konflik
+            }
+
             if (shouldReconnect) {
-
-
+                // Update status ke Appwrite
                 try {
                     await databases.updateDocument(
                         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -237,20 +304,28 @@ export async function connectToWhatsApp(deviceId: string) {
                     // Abaikan jika gagal
                 }
 
+                // Gunakan timeout yang sedikit lebih lama untuk memberikan waktu socket benar-benar bersih
                 setTimeout(async () => {
-                    // Cek apakah dokumen masih ada sebelum reconnect
                     try {
-                        await databases.getDocument(
+                        // Pastikan dokumen masih ada sebelum mencoba menghubungkan kembali
+                        const device = await databases.getDocument(
                             process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
                             process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
                             deviceId
                         );
-                        connectToWhatsApp(deviceId);
+                        
+                        if (device) {
+                            console.log(`[WA] Attempting to reconnect device ${deviceId}...`);
+                            connectToWhatsApp(deviceId);
+                        }
                     } catch {
-
+                        console.error(`[WA] Reconnect aborted for ${deviceId}: Device document might be deleted.`);
                     }
                 }, 5000);
             } else {
+                // Jika tidak perlu reconnect (logout atau 401)
+                console.warn(`[WA] Device ${deviceId} logged out or unauthorized. Cleaning up...`);
+                
                 // Hapus folder session lokal jika di-logout
                 try {
                     const sessionDir = path.join(process.cwd(), 'storage', 'whatsapp-sessions', deviceId);
@@ -268,12 +343,11 @@ export async function connectToWhatsApp(deviceId: string) {
                         deviceId,
                         {
                             status: 'disconnected',
-                            session: null,
                             qr: null
                         }
                     );
                 } catch {
-                    // Ignore error if document already deleted
+                    // Abaikan jika dokumen sudah dihapus
                 }
             }
         } else if (connection === 'open') {
@@ -294,15 +368,10 @@ export async function connectToWhatsApp(deviceId: string) {
                 // Update profil WA dengan retry (atribut baru butuh waktu untuk aktif di Appwrite)
                 const updateProfile = async (retries = 3, delay = 3000): Promise<void> => {
                     try {
-                        // Coba ambil nama dari berbagai kemungkinan field Baileys
-                        const user = sock.user as unknown as {
-                            pushName?: string;
-                            pushname?: string;
-                            notify?: string;
-                            name?: string;
-                            verifiedName?: string;
-                        };
-                        const waName = user?.pushName || user?.pushname || user?.notify || user?.name || user?.verifiedName || '';
+                        // Ambil nama dari berbagai kemungkinan (sock.user atau authState)
+                        const user = sock.user as unknown as { pushName?: string; pushname?: string; name?: string; verifiedName?: string };
+                        const waName = user?.pushName || user?.pushname || user?.name || user?.verifiedName || state.creds.me?.name || '';
+                        
                         let waImage = '';
                         try {
                             if (sock.user?.id) {
@@ -311,12 +380,19 @@ export async function connectToWhatsApp(deviceId: string) {
                         } catch {
                             // Foto tidak tersedia atau privasi
                         }
-                        await databases.updateDocument(
-                            process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-                            process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
-                            deviceId,
-                            { waName, waImage }
-                        );
+
+                        // Hanya update jika data minimal tersedia (waName atau waImage)
+                        if (waName || waImage) {
+                            await databases.updateDocument(
+                                process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+                                process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
+                                deviceId,
+                                { 
+                                    ...(waName && { waName }), 
+                                    ...(waImage && { waImage }) 
+                                }
+                            );
+                        }
                         // Listen for new messages
 
                     } catch (e: unknown) {

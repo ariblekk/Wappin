@@ -2,14 +2,38 @@ import { getDevices } from "@/app/actions/devices"
 import { getBroadcasts } from "@/app/actions/broadcast"
 import { getContacts } from "@/app/actions/contacts"
 import { BroadcastForm } from "@/components/broadcast/broadcast-form"
-import { BroadcastHistory } from "@/components/broadcast/broadcast-history"
+import { BroadcastHistory, Broadcast as BroadcastType, Device as DeviceType } from "@/components/broadcast/broadcast-history"
 import { Separator } from "@/components/ui/separator"
+import { Models } from "node-appwrite"
 
+interface Device extends Models.Document {
+  name: string;
+  status: string;
+  waName?: string;
+}
+
+interface Broadcast extends Models.Document {
+  name?: string;
+  message: string;
+  status: string;
+  total: number;
+  sent: number;
+  failed: number;
+  deviceId: string;
+  recipients?: string;
+  timestamp?: number;
+}
+
+interface Contact extends Models.Document {
+  name: string;
+  phone: string;
+  tags?: string;
+}
 
 export default async function BroadcastPage() {
-  const { devices } = await getDevices()
-  const { broadcasts } = await getBroadcasts()
-  const { contacts } = await getContacts()
+  const { devices } = await getDevices() as unknown as { devices: Device[] }
+  const { broadcasts } = await getBroadcasts() as unknown as { broadcasts: Broadcast[] }
+  const { contacts } = await getContacts() as unknown as { contacts: Contact[] }
 
   return (
     <div className="flex-1 space-y-6 p-8 pt-6">
@@ -32,8 +56,8 @@ export default async function BroadcastPage() {
         <section className="space-y-4">
           <h3 className="text-xl font-bold">Aktivitas Terakhir</h3>
           <BroadcastHistory 
-            broadcasts={broadcasts as any} 
-            devices={devices as any}
+            broadcasts={broadcasts as unknown as BroadcastType[]} 
+            devices={devices as unknown as DeviceType[]}
           />
         </section>
       </div>

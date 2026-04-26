@@ -13,9 +13,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Smartphone, Send, Paperclip, Loader2 } from "lucide-react"
+import { Smartphone, Send, Loader2, ShieldCheck, Info } from "lucide-react"
 import { sendTestMessage } from "@/app/actions/whatsapp"
+import { getContacts } from "@/app/actions/contacts"
 import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Models } from "node-appwrite"
 
 interface TestMessageDialogProps {
   open: boolean
@@ -34,6 +43,19 @@ export function TestMessageDialog({
   const [to, setTo] = React.useState("")
   const [message, setMessage] = React.useState("Halo, ini pesan test dari Wapping! 👋")
   const [count, setCount] = React.useState(1)
+  const [contacts, setContacts] = React.useState<Models.Document[]>([])
+
+  React.useEffect(() => {
+    if (open) {
+      const fetchContacts = async () => {
+        const res = await getContacts()
+        if (res.success) {
+          setContacts(res.contacts)
+        }
+      }
+      fetchContacts()
+    }
+  }, [open])
 
   const handleSend = async () => {
     if (!to) {
@@ -70,9 +92,10 @@ export function TestMessageDialog({
           failCount++
         }
         
-        // Jeda 1 detik antar pesan jika jumlahnya lebih dari 1
+        // Jeda acak antar pesan (2-4 detik) agar lebih menyerupai manusia
         if (count > 1 && i < count - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const randomDelay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000
+          await new Promise((resolve) => setTimeout(resolve, randomDelay))
         }
       }
     } catch (error) {
@@ -120,9 +143,29 @@ export function TestMessageDialog({
           <div className="space-y-4">
             {/* Target Number */}
             <div className="space-y-2">
-              <Label htmlFor="to" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Nomor Tujuan
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="to" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Nomor Tujuan
+                </Label>
+                {contacts.length > 0 && (
+                  <Select 
+                    value={to} 
+                    onValueChange={(value) => setTo(value)}
+                  >
+                    <SelectTrigger className="h-7 w-auto border-none bg-primary/10 text-primary hover:bg-primary/20 transition-colors rounded-lg px-2 text-[10px] font-bold uppercase tracking-tight">
+                      <SelectValue placeholder="Kontak" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" align="end" sideOffset={4} className="w-[250px]">
+                      {contacts.map((contact) => (
+                        <SelectItem key={contact.$id} value={contact.phone}>
+                          <span className="text-xs">{contact.name}</span>
+                          <span className="text-[10px] text-muted-foreground ml-2">({contact.phone})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <Input
                 id="to"
                 placeholder="628xxxxxxxxxx"
@@ -134,9 +177,17 @@ export function TestMessageDialog({
 
             {/* Jumlah Dikirim */}
             <div className="space-y-2">
-              <Label htmlFor="count" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Jumlah yang Dikirim
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="count" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Jumlah yang Dikirim
+                </Label>
+                {count > 1 && (
+                  <div className="flex items-center gap-1 text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                    <ShieldCheck className="size-3" />
+                    <span>Anti-Ban: Jeda Acak (2-4s)</span>
+                  </div>
+                )}
+              </div>
               <Input
                 id="count"
                 type="number"
@@ -146,6 +197,12 @@ export function TestMessageDialog({
                 onChange={(e) => setCount(Math.max(1, parseInt(e.target.value) || 1))}
                 className="h-11 rounded-xl"
               />
+              {count > 1 && (
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
+                  <Info className="size-3 shrink-0" />
+                  Sistem akan memberikan jeda acak antara 2-4 detik per pesan untuk mensimulasikan aktivitas manusia.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="message" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
@@ -158,19 +215,6 @@ export function TestMessageDialog({
                 onChange={(e) => setMessage(e.target.value)}
                 className="min-h-[120px] rounded-xl resize-none py-3"
               />
-            </div>
-
-            {/* Media Placeholder */}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                Media <span className="lowercase font-normal opacity-50">(opsional)</span>
-              </Label>
-              <div className="border-2 border-dashed rounded-xl p-3 flex items-center gap-3 text-muted-foreground cursor-not-allowed bg-muted/10 opacity-60">
-                <div className="size-9 rounded-lg bg-muted flex items-center justify-center">
-                  <Paperclip className="size-4" />
-                </div>
-                <span className="text-xs font-medium">Pilih media...</span>
-              </div>
             </div>
           </div>
         </div>

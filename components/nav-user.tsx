@@ -1,10 +1,8 @@
 "use client"
 
 import {
-    IconCreditCard,
     IconDotsVertical,
     IconLogout,
-    IconNotification,
     IconUserCircle,
 } from "@tabler/icons-react"
 import { useRouter } from "next/navigation"
@@ -96,17 +94,9 @@ export function NavUser({
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push("/dashboard/account")}>
                                 <IconUserCircle />
                                 Account
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <IconCreditCard />
-                                Billing
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <IconNotification />
-                                Notifications
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />

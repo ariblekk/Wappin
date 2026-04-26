@@ -22,11 +22,8 @@ import {
   Clock,
   Fingerprint,
   Wrench,
-  Crown,
-  Settings,
   Search,
   Users,
-  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -89,26 +86,6 @@ const data = {
           title: "Tools",
           url: "/dashboard/tools",
           icon: Wrench,
-        },
-      ],
-    },
-    {
-      title: "Pengaturan",
-      items: [
-        {
-          title: "Akun & API",
-          url: "/dashboard/account",
-          icon: User,
-        },
-        {
-          title: "Langganan",
-          url: "/dashboard/billing",
-          icon: Crown,
-        },
-        {
-          title: "Pengaturan",
-          url: "/dashboard/settings",
-          icon: Settings,
         },
       ],
     },

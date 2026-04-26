@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { getProfile, regenerateApiKey } from "@/app/actions/profiles"
+import { getProfile, regenerateApiKey, updateUserName } from "@/app/actions/profiles"
 import { getLoggedInUser } from "@/app/actions/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Key, Copy, RefreshCw, Shield, User, Zap, Mail } from "lucide-react"
+import { Key, Copy, RefreshCw, Shield, User, Zap, Mail, Edit2, Check, X } from "lucide-react"
 
 interface ProfileData {
   $id: string;
@@ -28,6 +28,9 @@ export default function AccountPage() {
   const [user, setUser] = React.useState<UserData | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [regenLoading, setRegenLoading] = React.useState(false)
+  const [isEditingName, setIsEditingName] = React.useState(false)
+  const [newName, setNewName] = React.useState("")
+  const [updateLoading, setUpdateLoading] = React.useState(false)
 
   React.useEffect(() => {
     async function loadData() {
@@ -42,6 +45,7 @@ export default function AccountPage() {
         }
         if (userRes) {
           setUser(userRes as unknown as UserData)
+          setNewName(userRes.name || "")
         }
       } catch {
         toast.error("Gagal memuat data")
@@ -51,6 +55,24 @@ export default function AccountPage() {
     }
     loadData()
   }, [])
+
+  async function handleUpdateName() {
+    if (!newName.trim()) {
+      toast.error("Nama tidak boleh kosong")
+      return
+    }
+    
+    setUpdateLoading(true)
+    const res = await updateUserName(newName)
+    if (res.success) {
+      setUser(prev => prev ? { ...prev, name: newName } : null)
+      setIsEditingName(false)
+      toast.success("Nama berhasil diperbarui!")
+    } else {
+      toast.error("Gagal memperbarui nama")
+    }
+    setUpdateLoading(false)
+  }
 
   async function handleRegenerate() {
     if (!confirm("Apakah Anda yakin ingin membuat ulang API Key? API Key lama tidak akan bisa digunakan lagi.")) {
@@ -82,9 +104,12 @@ export default function AccountPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Akun & Pengaturan</h1>
-        <p className="text-muted-foreground">Kelola informasi profil, paket layanan, dan akses API Anda.</p>
+      <div className="flex items-center justify-between space-y-2">
+        <div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">Kelola informasi profil, dan akses API Anda.</span>
+          </div>
+        </div>
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
@@ -111,8 +136,61 @@ export default function AccountPage() {
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">Nama</span>
-                  <p className="text-md font-bold">{user?.name || "User"}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">Nama</span>
+                    {!isEditingName ? (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => setIsEditingName(true)}
+                      >
+                        <Edit2 className="size-3 mr-1" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 px-2 text-green-600 hover:text-green-600 hover:bg-green-100"
+                          onClick={handleUpdateName}
+                          disabled={updateLoading}
+                        >
+                          {updateLoading ? <RefreshCw className="size-3 animate-spin" /> : <Check className="size-3" />}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 px-2 text-red-600 hover:text-red-600 hover:bg-red-100"
+                          onClick={() => {
+                            setIsEditingName(false)
+                            setNewName(user?.name || "")
+                          }}
+                          disabled={updateLoading}
+                        >
+                          <X className="size-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {!isEditingName ? (
+                    <p className="text-md font-bold">{user?.name || "User"}</p>
+                  ) : (
+                    <Input 
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="h-8 text-sm font-medium mt-1"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleUpdateName()
+                        if (e.key === 'Escape') {
+                          setIsEditingName(false)
+                          setNewName(user?.name || "")
+                        }
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">

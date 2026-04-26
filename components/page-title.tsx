@@ -14,6 +14,7 @@ const routeMap: Record<string, string> = {
   "/dashboard/reminder": "Reminder",
   "/dashboard/otp-service": "OTP Service",
   "/dashboard/tools": "Tools",
+  "/dashboard/account": "Pengaturan Akun",
 }
 
 export function PageTitle() {

@@ -166,18 +166,9 @@ export default async function DeviceDetailPage({
             </Card>
           </TabsContent>
 
-          {/* ── Tab: Message Log ───────────────────────────── */}
           <TabsContent value="messages" className="mt-0">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MessageSquare className="size-4 text-primary" />
-                  Message Log
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MessageLogTable initialMessages={messages as unknown as MessageDocument[]} deviceId={device.$id} />
-              </CardContent>
+              <MessageLogTable initialMessages={messages as unknown as MessageDocument[]} deviceId={device.$id} />
             </Card>
           </TabsContent>
         </Tabs>

@@ -21,13 +21,13 @@ import {
 } from "@/components/ui/dialog"
 import { formatDistanceToNow, format } from "date-fns"
 import { id as localeID } from "date-fns/locale"
-import { 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  PlayCircle, 
-  History, 
-  Eye, 
+import {
+  Clock,
+  CheckCircle2,
+  XCircle,
+  PlayCircle,
+  History,
+  Eye,
   Smartphone,
   Info,
   Calendar,
@@ -38,8 +38,10 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { client } from "@/lib/appwrite-client"
 import { getAppwriteJWT } from "@/app/actions/auth"
+import { getBroadcasts } from "@/app/actions/broadcast"
+import { RefreshCw } from "lucide-react"
 
-interface Broadcast {
+export interface Broadcast {
   $id: string
   name?: string
   message: string
@@ -53,13 +55,13 @@ interface Broadcast {
   $createdAt: string
 }
 
-interface Device {
+export interface Device {
   $id: string
   name: string
   waName?: string
 }
 
-interface BroadcastHistoryProps {
+export interface BroadcastHistoryProps {
   broadcasts: Broadcast[]
   devices: Device[]
 }
@@ -67,7 +69,22 @@ interface BroadcastHistoryProps {
 export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: BroadcastHistoryProps) {
   const [broadcasts, setBroadcasts] = React.useState(initialBroadcasts)
   const [selectedBroadcast, setSelectedBroadcast] = React.useState<Broadcast | null>(null)
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
   const unsubscribeRef = React.useRef<(() => void) | null>(null)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      const res = await getBroadcasts()
+      if (res.success) {
+        setBroadcasts(res.broadcasts as unknown as Broadcast[])
+      }
+    } catch (error) {
+      console.error("Failed to refresh broadcasts:", error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   React.useEffect(() => {
     async function initRealtime() {
@@ -140,15 +157,27 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
   return (
     <>
       <Card className="border-2 border-primary/5 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
-        <CardHeader className="bg-muted/30 pb-4">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
               <History className="size-5 text-primary animate-in fade-in zoom-in duration-500" />
               Riwayat Broadcast
             </CardTitle>
-            <Badge variant="outline" className="font-mono bg-background/50 backdrop-blur-sm border-primary/10">
-              {broadcasts.length} total
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono bg-background/50 backdrop-blur-sm border-primary/10">
+                {broadcasts.length} total
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="h-8 gap-2 bg-background/50 backdrop-blur-sm"
+              >
+                <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -194,14 +223,14 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
                       <Badge className={`
                         ${item.status === 'completed' ? 'bg-green-500/10 text-green-600 border-green-500/20' :
                           item.status === 'processing' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20 animate-pulse' :
-                          item.status === 'pending' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                          'bg-red-500/10 text-red-600 border-red-500/20'} 
+                            item.status === 'pending' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                              'bg-red-500/10 text-red-600 border-red-500/20'} 
                         px-2 py-0.5 h-6 flex w-fit items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider
                       `} variant="outline">
-                        {item.status === 'completed' ? <CheckCircle2 className="size-3" /> : 
-                         item.status === 'processing' ? <PlayCircle className="size-3" /> : 
-                         item.status === 'pending' ? <Clock className="size-3" /> :
-                         <XCircle className="size-3" />}
+                        {item.status === 'completed' ? <CheckCircle2 className="size-3" /> :
+                          item.status === 'processing' ? <PlayCircle className="size-3" /> :
+                            item.status === 'pending' ? <Clock className="size-3" /> :
+                              <XCircle className="size-3" />}
                         {item.status === 'pending' ? 'Scheduled' : item.status}
                       </Badge>
                     </TableCell>
@@ -241,9 +270,9 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-all group-hover:scale-105"
                         onClick={() => setSelectedBroadcast(item)}
                       >
@@ -297,7 +326,7 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
                   </div>
                   <p className="text-sm font-bold">{getDeviceName(selectedBroadcast.deviceId)}</p>
                   <p className="text-[10px] text-muted-foreground font-mono">
-                    {selectedBroadcast.deviceId.slice(0, 8)}...
+                    {selectedBroadcast.deviceId?.slice(0, 8)}...
                   </p>
                 </div>
               </div>

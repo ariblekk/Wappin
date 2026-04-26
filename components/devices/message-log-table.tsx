@@ -2,8 +2,11 @@
 
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
-import { MessageSquare } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { MessageSquare, RefreshCw } from "lucide-react"
 import { client } from "@/lib/appwrite-client"
+import { getDeviceMessages } from "@/app/actions/devices"
 
 export interface MessageDocument {
   $id: string
@@ -21,6 +24,21 @@ interface MessageLogTableProps {
 
 export function MessageLogTable({ initialMessages, deviceId }: MessageLogTableProps) {
   const [messages, setMessages] = React.useState<MessageDocument[]>(initialMessages)
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      const res = await getDeviceMessages(deviceId)
+      if (res.success) {
+        setMessages(res.messages as unknown as MessageDocument[])
+      }
+    } catch (error) {
+      console.error("Failed to refresh messages:", error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   React.useEffect(() => {
     const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!
@@ -60,10 +78,10 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
       const customEvent = e as CustomEvent<MessageDocument>
       const payload = customEvent.detail
       if (payload.deviceId !== deviceId) return
-      
+
       setMessages((prev) => [payload, ...prev])
     }
-    
+
     window.addEventListener('optimistic-message', handleOptimistic)
 
     return () => {
@@ -74,70 +92,112 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-        <div className="size-14 rounded-full bg-muted flex items-center justify-center">
-          <MessageSquare className="size-7 text-muted-foreground" />
-        </div>
-        <p className="text-sm font-medium">Belum ada pesan</p>
-        <p className="text-xs text-muted-foreground max-w-xs">
-          Belum ada pesan yang dikirim melalui perangkat ini.
-        </p>
-      </div>
+      <>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="size-4 text-primary" />
+            Message Log
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-8 gap-2"
+          >
+            <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+            <div className="size-14 rounded-full bg-muted flex items-center justify-center">
+              <MessageSquare className="size-7 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Belum ada pesan</p>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Belum ada pesan yang dikirim melalui perangkat ini.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </>
     )
   }
 
   return (
-    <div className="overflow-x-auto border rounded-xl">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr className="border-b text-xs font-bold text-muted-foreground bg-muted/30 uppercase tracking-wider">
-            <th className="py-3 px-4">Tujuan</th>
-            <th className="py-3 px-4">Pesan</th>
-            <th className="py-3 px-4">Status</th>
-            <th className="py-3 px-4">Waktu</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y text-sm">
-          {messages.map((msg) => (
-            <tr key={msg.$id} className="hover:bg-muted/10 transition-colors">
-              <td className="py-3 px-4 font-mono font-semibold text-foreground/80">+{msg.to}</td>
-              <td className="py-3 px-4 max-w-[200px] sm:max-w-xs truncate text-muted-foreground" title={msg.body}>
-                {msg.body}
-              </td>
-              <td className="py-3 px-4">
-                <Badge
-                  className={`text-[10px] font-bold px-2 py-0 h-5 flex items-center w-fit gap-1 ${msg.status === "sent"
+    <>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base flex items-center gap-2">
+          <MessageSquare className="size-4 text-primary" />
+          Message Log
+        </CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="h-8 gap-2"
+        >
+          <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto border rounded-xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b text-xs font-bold text-muted-foreground bg-muted/30 uppercase tracking-wider">
+              <th className="py-3 px-4">Tujuan</th>
+              <th className="py-3 px-4">Pesan</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Waktu</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y text-sm">
+            {messages.map((msg) => (
+              <tr key={msg.$id} className="hover:bg-muted/10 transition-colors">
+                <td className="py-3 px-4 font-mono font-semibold text-foreground/80">+{msg.to}</td>
+                <td className="py-3 px-4 max-w-[200px] sm:max-w-xs truncate text-muted-foreground" title={msg.body}>
+                  {msg.body}
+                </td>
+                <td className="py-3 px-4">
+                  <Badge
+                    className={`text-[10px] font-bold px-2 py-0 h-5 flex items-center w-fit gap-1 ${msg.status === "sent"
                       ? "bg-green-50 text-green-700 border-green-200"
                       : msg.status === "failed"
                         ? "bg-red-50 text-red-700 border-red-200"
                         : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                    }`}
-                >
-                  <span
-                    className={`size-1 rounded-full ${msg.status === "sent"
+                      }`}
+                  >
+                    <span
+                      className={`size-1 rounded-full ${msg.status === "sent"
                         ? "bg-green-600"
                         : msg.status === "failed"
                           ? "bg-red-500"
                           : "bg-yellow-500"
-                      }`}
-                  />
-                  {msg.status === "sent" ? "Terkirim" : msg.status === "failed" ? "Gagal" : "Pending"}
-                </Badge>
-              </td>
-              <td className="py-3 px-4 text-xs text-muted-foreground font-medium">
-                {msg.sentAt
-                  ? new Date(msg.sentAt).toLocaleString("id-ID", {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                  : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                        }`}
+                    />
+                    {msg.status === "sent" ? "Terkirim" : msg.status === "failed" ? "Gagal" : "Pending"}
+                  </Badge>
+                </td>
+                <td className="py-3 px-4 text-xs text-muted-foreground font-medium">
+                  {msg.sentAt
+                    ? new Date(msg.sentAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        </div>
+      </CardContent>
+    </>
   )
 }

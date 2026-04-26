@@ -47,6 +47,17 @@ export async function getProfile() {
     }
 }
 
+export async function updateUserName(name: string) {
+    try {
+        const { account } = await createSessionClient();
+        await account.updateName(name);
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating user name:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
 export async function regenerateApiKey() {
     try {
         const user = await getLoggedInUser();
