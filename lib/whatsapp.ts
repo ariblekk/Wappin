@@ -20,7 +20,7 @@ const msgRetryCounterCache = {
     set: (key: string, value: number) => msgRetryCounterMap.set(key, value),
     del: (key: string) => msgRetryCounterMap.delete(key),
     flushAll: () => msgRetryCounterMap.clear()
-} as unknown as any;
+} as unknown as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const msgRetryCounterMap = new Map<string, number>();
 
@@ -119,7 +119,7 @@ export async function connectToWhatsApp(deviceId: string) {
 
     sock.ev.on('creds.update', async (update) => {
         await saveCreds();
-        
+
         // Tangkap nama profil dari creds jika tersedia
         if (update.me?.name) {
             const waName = update.me.name;
@@ -267,9 +267,11 @@ export async function connectToWhatsApp(deviceId: string) {
                               (statusCode === 440 && errorReason === 'conflict') ||
                               lastDisconnect?.error?.message?.includes('replaced');
 
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && 
+            const shouldReconnect = (statusCode !== DisconnectReason.loggedOut && 
                                   statusCode !== 401 && 
-                                  !isConflict;
+                                  !isConflict) || 
+                                  statusCode === DisconnectReason.restartRequired ||
+                                  statusCode === DisconnectReason.connectionLost;
 
             console.log(`[WA] Connection closed for ${deviceId}. Reason: ${statusCode} (${errorReason}), Conflict: ${isConflict}, Reconnecting: ${shouldReconnect}`);
 
@@ -313,7 +315,7 @@ export async function connectToWhatsApp(deviceId: string) {
                             process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
                             deviceId
                         );
-                        
+
                         if (device) {
                             console.log(`[WA] Attempting to reconnect device ${deviceId}...`);
                             connectToWhatsApp(deviceId);
@@ -325,7 +327,7 @@ export async function connectToWhatsApp(deviceId: string) {
             } else {
                 // Jika tidak perlu reconnect (logout atau 401)
                 console.warn(`[WA] Device ${deviceId} logged out or unauthorized. Cleaning up...`);
-                
+
                 // Hapus folder session lokal jika di-logout
                 try {
                     const sessionDir = path.join(process.cwd(), 'storage', 'whatsapp-sessions', deviceId);
@@ -371,7 +373,7 @@ export async function connectToWhatsApp(deviceId: string) {
                         // Ambil nama dari berbagai kemungkinan (sock.user atau authState)
                         const user = sock.user as unknown as { pushName?: string; pushname?: string; name?: string; verifiedName?: string };
                         const waName = user?.pushName || user?.pushname || user?.name || user?.verifiedName || state.creds.me?.name || '';
-                        
+
                         let waImage = '';
                         try {
                             if (sock.user?.id) {
@@ -387,9 +389,9 @@ export async function connectToWhatsApp(deviceId: string) {
                                 process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
                                 process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
                                 deviceId,
-                                { 
-                                    ...(waName && { waName }), 
-                                    ...(waImage && { waImage }) 
+                                {
+                                    ...(waName && { waName }),
+                                    ...(waImage && { waImage })
                                 }
                             );
                         }
@@ -475,7 +477,7 @@ export async function sendMessage(deviceId: string, to: string, text: string) {
                     const statusCode = (update.lastDisconnect?.error as Boom)?.output?.statusCode;
                     clearTimeout(timer);
                     s.ev.off('connection.update', listener);
-                    
+
                     if (statusCode === DisconnectReason.loggedOut) {
                         reject(new Error("Perangkat telah keluar (Logged Out)."));
                     } else {
@@ -504,7 +506,7 @@ export async function sendMessage(deviceId: string, to: string, text: string) {
         if (error.message?.includes('Closed') || error.output?.statusCode === 428) {
             sessions.delete(deviceId);
             console.log(`[WA Retry] Koneksi terputus untuk device ${deviceId}. Mencoba menghubungkan ulang dalam 2 detik...`);
-            
+
             try {
                 await new Promise(res => setTimeout(res, 2000));
                 const newSock = await connectToWhatsApp(deviceId);

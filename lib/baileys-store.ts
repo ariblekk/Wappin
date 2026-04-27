@@ -3,9 +3,9 @@ import path from 'path';
 import fs from 'fs';
 
 /**
- * Custom Baileys session store using local file system.
- * We keep the name getAppwriteAuthState to avoid breaking existing imports,
- * but we now use useMultiFileAuthState for reliability.
+ * Baileys session store menggunakan local file system dengan cache memory.
+ * useMultiFileAuthState digunakan sebagai dasar penyimpanan permanen, 
+ * namun performa ditingkatkan dengan makeCacheableSignalKeyStore di sisi socket.
  */
 export async function getAppwriteAuthState(deviceId: string) {
     // Tentukan direktori penyimpanan session
@@ -19,7 +19,6 @@ export async function getAppwriteAuthState(deviceId: string) {
 
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-
 
     return {
         state,

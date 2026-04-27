@@ -14,6 +14,8 @@ import {
   TrendingUp
 } from "lucide-react"
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const [devicesRes, broadcastsRes, contactsRes, user] = await Promise.all([
     getDevices(),

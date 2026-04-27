@@ -30,6 +30,8 @@ interface Contact extends Models.Document {
   tags?: string;
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function BroadcastPage() {
   const { devices } = await getDevices() as unknown as { devices: Device[] }
   const { broadcasts } = await getBroadcasts() as unknown as { broadcasts: Broadcast[] }
