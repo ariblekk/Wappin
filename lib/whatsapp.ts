@@ -38,7 +38,14 @@ interface AppwriteDevice extends Models.Document {
 
 
 
-const sessions = new Map<string, WASocket>();
+declare global {
+    var waSessions: Map<string, WASocket> | undefined;
+}
+
+const sessions = globalThis.waSessions || new Map<string, WASocket>();
+if (process.env.NODE_ENV !== 'production') {
+    globalThis.waSessions = sessions;
+}
 
 
 

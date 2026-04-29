@@ -60,6 +60,8 @@ export async function createBroadcast(formData: {
             : Math.floor(Date.now() / 1000);
 
         // Create the broadcast record
+        const recipientData = recipientList.map(phone => ({ phone, status: "pending" }));
+        
         const broadcast = await databases.createDocument(
             DB_ID,
             COL_ID,
@@ -71,7 +73,7 @@ export async function createBroadcast(formData: {
                 title: formData.name, // Map to title for compatibility
                 message: formData.message,
                 body: formData.message, // Map to body for compatibility
-                recipients: JSON.stringify(recipientList),
+                recipients: JSON.stringify(recipientData),
                 status: status,
                 total: recipientList.length,
                 sent: 0,
@@ -105,25 +107,44 @@ export async function processBroadcast(
 ) {
 
     const { databases } = await createAdminClient();
+    
+    // Get current recipient data to update status per phone
+    let recipientData: { phone: string, status: string }[] = [];
+    try {
+        const doc = await databases.getDocument(DB_ID, COL_ID, broadcastId);
+        const parsed = JSON.parse(doc.recipients);
+        if (Array.isArray(parsed) && typeof parsed[0] === 'object') {
+            recipientData = parsed;
+        } else {
+            recipientData = recipients.map(phone => ({ phone, status: "pending" }));
+        }
+    } catch (e) {
+        recipientData = recipients.map(phone => ({ phone, status: "pending" }));
+    }
+
     let sentCount = 0;
     let failedCount = 0;
 
-    for (const recipient of recipients) {
+    for (let i = 0; i < recipients.length; i++) {
+        const recipient = recipients[i];
 
         try {
             await sendMessage(deviceId, recipient, message);
             sentCount++;
+            if (recipientData[i]) recipientData[i].status = "sent";
 
         } catch (error) {
             console.error(`[Broadcast ${broadcastId}] Failed for ${recipient}:`, error);
             failedCount++;
+            if (recipientData[i]) recipientData[i].status = "failed";
         }
 
-        // Update progress in Appwrite
+        // Update progress and per-phone status in Appwrite
         try {
             await databases.updateDocument(DB_ID, COL_ID, broadcastId, {
                 sent: sentCount,
-                failed: failedCount
+                failed: failedCount,
+                recipients: JSON.stringify(recipientData)
             });
         } catch (e) {
             console.error(`[Broadcast ${broadcastId}] Failed to update progress:`, e);
@@ -131,13 +152,11 @@ export async function processBroadcast(
 
         // Delay to avoid being flagged as spam (2-5 seconds)
         if (sentCount + failedCount < recipients.length) {
-
             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
         }
     }
 
     // Mark as completed
-
     try {
         await databases.updateDocument(DB_ID, COL_ID, broadcastId, {
             status: "completed"
@@ -147,11 +166,18 @@ export async function processBroadcast(
     }
 }
 
-let workerStarted = false;
+declare global {
+    var broadcastWorkerStarted: boolean | undefined;
+}
+
+let workerStarted = globalThis.broadcastWorkerStarted || false;
 
 function startBroadcastWorker() {
     if (workerStarted) return;
     workerStarted = true;
+    if (process.env.NODE_ENV !== 'production') {
+        globalThis.broadcastWorkerStarted = true;
+    }
 
     // Jalankan setiap 30 detik
     setInterval(async () => {
@@ -177,7 +203,11 @@ function startBroadcastWorker() {
                         status: "processing"
                     });
 
-                    const recipients = JSON.parse(doc.recipients);
+                    const recipientsData = JSON.parse(doc.recipients);
+                    const recipients = Array.isArray(recipientsData) && typeof recipientsData[0] === 'object'
+                        ? recipientsData.map((r: any) => r.phone)
+                        : recipientsData;
+
                     // Jalankan proses broadcast di background
                     processBroadcast(doc.$id, doc.deviceId, doc.message || doc.body, recipients);
                 } catch (err) {

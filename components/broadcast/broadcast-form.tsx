@@ -162,132 +162,121 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-2 border-primary/5 shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="size-5 text-primary" />
-                Penerima
+                <Send className="size-5 text-primary" />
+                Kirim Broadcast
               </CardTitle>
+              <CardDescription>
+                Pilih penerima, pengirim, dan tulis pesan yang ingin disebarkan.
+              </CardDescription>
+            </div>
 
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5 border-primary/20 text-primary hover:bg-primary/5">
-                    <Contact2 className="size-3.5" />
-                    Pilih Kontak
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Pilih dari Kontak</DialogTitle>
-                    <DialogDescription>
-                      Pilih kontak yang ingin Anda tambahkan ke daftar penerima.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Cari nama atau nomor..."
-                        className="pl-9"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                      />
-                    </div>
-                    <ScrollArea className="h-[300px] rounded-md border p-2">
-                      <div className="space-y-1">
-                        {filteredContacts.length === 0 ? (
-                          <p className="text-center py-8 text-sm text-muted-foreground italic">
-                            Kontak tidak ditemukan
-                          </p>
-                        ) : (
-                          filteredContacts.map((contact) => (
-                            <div
-                              key={contact.$id}
-                              className="flex items-center space-x-3 space-y-0 rounded-lg p-2 hover:bg-muted/50 transition-colors"
-                            >
-                              <Checkbox
-                                id={contact.$id}
-                                checked={selectedContacts.includes(contact.$id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedContacts(prev => [...prev, contact.$id])
-                                  } else {
-                                    setSelectedContacts(prev => prev.filter(id => id !== contact.$id))
-                                  }
-                                }}
-                              />
-                              <label
-                                htmlFor={contact.$id}
-                                className="flex-1 grid gap-0.5 cursor-pointer"
-                              >
-                                <span className="text-sm font-medium leading-none">
-                                  {contact.name}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {contact.phone}
-                                </span>
-                              </label>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </ScrollArea>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 border-primary/20 text-primary hover:bg-primary/5">
+                  <Contact2 className="size-3.5" />
+                  Pilih Kontak
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Pilih dari Kontak</DialogTitle>
+                  <DialogDescription>
+                    Pilih kontak yang ingin Anda tambahkan ke daftar penerima.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari nama atau nomor..."
+                      className="pl-9"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
                   </div>
-                  <DialogFooter>
-                    <div className="flex items-center justify-between w-full">
-                      <p className="text-xs text-muted-foreground">
-                        {selectedContacts.length} terpilih
-                      </p>
-                      <DialogTrigger asChild>
-                        <Button onClick={handleAddSelected} disabled={selectedContacts.length === 0}>
-                          Tambahkan Ke Daftar
-                        </Button>
-                      </DialogTrigger>
+                  <ScrollArea className="h-[300px] rounded-md border p-2">
+                    <div className="space-y-1">
+                      {filteredContacts.length === 0 ? (
+                        <p className="text-center py-8 text-sm text-muted-foreground italic">
+                          Kontak tidak ditemukan
+                        </p>
+                      ) : (
+                        filteredContacts.map((contact) => (
+                          <div
+                            key={contact.$id}
+                            className="flex items-center space-x-3 space-y-0 rounded-lg p-2 hover:bg-muted/50 transition-colors"
+                          >
+                            <Checkbox
+                              id={contact.$id}
+                              checked={selectedContacts.includes(contact.$id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedContacts(prev => [...prev, contact.$id])
+                                } else {
+                                  setSelectedContacts(prev => prev.filter(id => id !== contact.$id))
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={contact.$id}
+                              className="flex-1 grid gap-0.5 cursor-pointer"
+                            >
+                              <span className="text-sm font-medium leading-none">
+                                {contact.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {contact.phone}
+                              </span>
+                            </label>
+                          </div>
+                        ))
+                      )}
                     </div>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <CardDescription>
-              Masukkan nomor WhatsApp (satu per baris atau pisahkan dengan koma).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipients">Daftar Nomor</Label>
-              <Textarea
-                id="recipients"
-                placeholder="628123456789&#10;628987654321"
-                className="min-h-[200px] font-mono text-sm resize-none focus-visible:ring-primary/20"
-                value={formData.recipients}
-                onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
-              />
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <AlertCircle className="size-3" />
-                Pastikan nomor menyertakan kode negara (contoh: 62812...)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+                  </ScrollArea>
+                </div>
+                <DialogFooter>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
+                    <p className="text-xs text-muted-foreground">
+                      {selectedContacts.length} terpilih
+                    </p>
+                    <DialogTrigger asChild>
+                      <Button onClick={handleAddSelected} disabled={selectedContacts.length === 0} className="w-full sm:w-auto">
+                        Tambahkan Ke Daftar
+                      </Button>
+                    </DialogTrigger>
+                  </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="recipients">Daftar Nomor</Label>
+            <Textarea
+              id="recipients"
+              placeholder="628123456789&#10;628987654321"
+              className="min-h-[150px] font-mono text-sm resize-none focus-visible:ring-primary/20"
+              value={formData.recipients}
+              onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
+            />
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <AlertCircle className="size-3" />
+              Pastikan nomor menyertakan kode negara (contoh: 62812...)
+            </p>
+          </div>
 
-        <Card className="border-2 border-primary/5 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <MessageSquare className="size-5 text-primary" />
-              Pesan & Perangkat
-            </CardTitle>
-            <CardDescription>
-              Pilih pengirim dan tulis pesan yang ingin disebarkan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Nama Broadcast</Label>
               <Input
                 id="name"
-                placeholder="Contoh: Promo Lebaran 2024"
+                placeholder="Contoh: Promo Lebaran"
                 className="h-11 focus-visible:ring-primary/20"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -316,80 +305,80 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="message">Isi Pesan</Label>
-              <Textarea
-                id="message"
-                placeholder="Halo, ada penawaran menarik buat kamu..."
-                className="min-h-[150px] resize-none focus-visible:ring-primary/20"
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          <div className="space-y-2">
+            <Label htmlFor="message">Isi Pesan</Label>
+            <Textarea
+              id="message"
+              placeholder="Halo, ada penawaran menarik buat kamu..."
+              className="min-h-[150px] resize-none focus-visible:ring-primary/20"
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+            />
+          </div>
+
+          {sendOption === 'scheduled' && (
+            <div className="space-y-2 animate-in fade-in-50 duration-200">
+              <Label htmlFor="scheduleTime" className="flex items-center gap-2">
+                <Calendar className="size-4 text-primary" />
+                Waktu Pengiriman
+              </Label>
+              <Input
+                id="scheduleTime"
+                type="datetime-local"
+                className="h-11 focus-visible:ring-primary/20"
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
               />
             </div>
+          )}
 
-            {sendOption === 'scheduled' && (
-              <div className="space-y-2 animate-in fade-in-50 duration-200">
-                <Label htmlFor="scheduleTime" className="flex items-center gap-2">
-                  <Calendar className="size-4 text-primary" />
-                  Waktu Pengiriman
-                </Label>
-                <Input
-                  id="scheduleTime"
-                  type="datetime-local"
-                  className="h-11 focus-visible:ring-primary/20"
-                  value={scheduleTime}
-                  onChange={(e) => setScheduleTime(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                />
-              </div>
-            )}
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="submit"
+              className="flex-1 text-md font-bold h-11"
+              disabled={loading || connectedDevices.length === 0}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <Send className="h-5 w-5" />
+                  {sendOption === 'now' ? 'Kirim Broadcast Sekarang' : 'Jadwalkan Broadcast'}
+                </>
+              )}
+            </Button>
 
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 text-md font-bold h-11"
-                disabled={loading || connectedDevices.length === 0}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-5 w-5" />
-                    {sendOption === 'now' ? 'Kirim Broadcast Sekarang' : 'Jadwalkan Broadcast'}
-                  </>
-                )}
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="px-3 h-11 border-primary/20 hover:bg-primary/5"
-                    disabled={loading || connectedDevices.length === 0}
-                  >
-                    <ChevronDown className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[200px]">
-                  <DropdownMenuItem onClick={() => setSendOption('now')} className="flex items-center gap-2 cursor-pointer">
-                    <Send className="size-4" />
-                    <span>Kirim Sekarang</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSendOption('scheduled')} className="flex items-center gap-2 cursor-pointer">
-                    <Calendar className="size-4" />
-                    <span>Jadwalkan</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="px-3 h-11 border-primary/20 hover:bg-primary/5"
+                  disabled={loading || connectedDevices.length === 0}
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuItem onClick={() => setSendOption('now')} className="flex items-center gap-2 cursor-pointer">
+                  <Send className="size-4" />
+                  <span>Kirim Sekarang</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSendOption('scheduled')} className="flex items-center gap-2 cursor-pointer">
+                  <Calendar className="size-4" />
+                  <span>Jadwalkan</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
     </form>
   )
 }

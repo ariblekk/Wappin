@@ -20,8 +20,6 @@ interface Device extends Models.Document {
   userId: string
 }
 
-export const dynamic = 'force-dynamic';
-
 export default async function DevicesPage() {
   const { devices } = (await getDevices()) as unknown as { devices: Device[] };
 

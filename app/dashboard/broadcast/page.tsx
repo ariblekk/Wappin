@@ -38,31 +38,26 @@ export default async function BroadcastPage() {
   const { contacts } = await getContacts() as unknown as { contacts: Contact[] }
 
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6">
+    <div className="flex flex-1 flex-col gap-6 p-8 pt-6">
 
-      <div className="grid gap-6">
-        <section className="space-y-4">
-          <div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-muted-foreground">Kirim pesan ke kontak atau grup secara massal dengan cepat dan aman.</span>
-            </div>
+      <section className="space-y-4">
+        <div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-sm text-muted-foreground">Kirim pesan ke kontak atau grup secara massal dengan cepat dan aman.</span>
           </div>
-          <BroadcastForm
-            devices={devices as unknown as { $id: string; name: string; status: string; waName?: string }[]}
-            contacts={contacts as unknown as { $id: string; name: string; phone: string; tags?: string }[]}
-          />
-        </section>
+        </div>
+        <BroadcastForm
+          devices={devices as unknown as { $id: string; name: string; status: string; waName?: string }[]}
+          contacts={contacts as unknown as { $id: string; name: string; phone: string; tags?: string }[]}
+        />
+      </section>
 
-        <Separator className="opacity-50" />
-
-        <section className="space-y-4">
-          <h3 className="text-xl font-bold">Aktivitas Terakhir</h3>
-          <BroadcastHistory 
-            broadcasts={broadcasts as unknown as BroadcastType[]} 
-            devices={devices as unknown as DeviceType[]}
-          />
-        </section>
-      </div>
+      <section className="space-y-4">
+        <BroadcastHistory
+          broadcasts={broadcasts as unknown as BroadcastType[]}
+          devices={devices as unknown as DeviceType[]}
+        />
+      </section>
     </div>
   )
 }

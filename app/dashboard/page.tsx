@@ -3,7 +3,7 @@ import { getDevices } from "@/app/actions/devices"
 import { getBroadcasts } from "@/app/actions/broadcast"
 import { getContacts } from "@/app/actions/contacts"
 import { getLoggedInUser } from "@/app/actions/auth"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { 
   Smartphone, 
   Send, 
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="border-2 border-primary/5 shadow-sm hover:shadow-md transition-shadow">
+          <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 {stat.title}
@@ -82,16 +82,18 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
+            </CardContent>
+            <CardFooter>
               <p className="text-xs text-muted-foreground mt-1">
                 {stat.description}
               </p>
-            </CardContent>
+            </CardFooter>
           </Card>
         ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4 border-2 border-primary/5 shadow-sm">
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -134,7 +136,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3 border-2 border-primary/5 shadow-sm">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-primary" />

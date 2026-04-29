@@ -10,21 +10,20 @@ const COL_ID = "auto_replies";
 
 export async function getAutoReplies() {
     try {
+        const user = await getLoggedInUser();
+        if (!user) throw new Error("Unauthorized");
+
         const { databases } = await createSessionClient();
         
-        const [user, replies] = await Promise.all([
-            getLoggedInUser(),
-            databases.listDocuments(
-                DB_ID,
-                COL_ID,
-                [
-                    Query.orderDesc("$createdAt"),
-                    Query.limit(100)
-                ]
-            )
-        ]);
-
-        if (!user) throw new Error("Unauthorized");
+        const replies = await databases.listDocuments(
+            DB_ID,
+            COL_ID,
+            [
+                Query.equal("userId", user.$id),
+                Query.orderDesc("$createdAt"),
+                Query.limit(100)
+            ]
+        );
 
         return { success: true, replies: replies.documents };
     } catch (error) {

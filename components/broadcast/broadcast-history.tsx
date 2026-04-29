@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -145,10 +144,14 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
     return device ? (device.waName || device.name) : "Device Terhapus"
   }
 
-  const parseRecipients = (recipientsJson?: string): string[] => {
+  const parseRecipients = (recipientsJson?: string): { phone: string, status?: string }[] => {
     if (!recipientsJson) return []
     try {
-      return JSON.parse(recipientsJson)
+      const parsed = JSON.parse(recipientsJson)
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => typeof item === 'string' ? { phone: item } : item)
+      }
+      return []
     } catch {
       return []
     }
@@ -156,31 +159,27 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
 
   return (
     <>
-      <Card className="border-2 border-primary/5 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="size-5 text-primary animate-in fade-in zoom-in duration-500" />
-              Riwayat Broadcast
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono bg-background/50 backdrop-blur-sm border-primary/10">
-                {broadcasts.length} total
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="h-8 gap-2 bg-background/50 backdrop-blur-sm"
-              >
-                <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-            </div>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <History className="size-5 text-primary animate-in fade-in zoom-in duration-500" />
+            Riwayat Broadcast
+            <Badge variant="outline" className="font-mono bg-background/50 backdrop-blur-sm border-primary/10">
+              {broadcasts.length} total
+            </Badge>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-8 gap-2 bg-background/50 backdrop-blur-sm"
+          >
+            <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+        <div className="rounded-md border bg-card/50 backdrop-blur-sm overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/10">
               <TableRow className="hover:bg-transparent border-primary/5">
@@ -284,8 +283,8 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog open={!!selectedBroadcast} onOpenChange={(open) => !open && setSelectedBroadcast(null)}>
         <DialogContent className="sm:max-w-[550px] border-primary/10 shadow-2xl overflow-hidden">
@@ -357,10 +356,16 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
                 </div>
                 <ScrollArea className="h-[120px] rounded-xl border border-primary/5 bg-muted/10 p-3">
                   <div className="grid grid-cols-2 gap-2">
-                    {parseRecipients(selectedBroadcast.recipients).map((phone, idx) => (
+                    {parseRecipients(selectedBroadcast.recipients).map((item, idx) => (
                       <div key={idx} className="flex items-center gap-2 bg-background/50 p-1.5 rounded-lg border border-primary/5">
-                        <div className="size-1.5 rounded-full bg-primary/40" />
-                        <span className="text-xs font-mono">{phone}</span>
+                        <div className={`size-1.5 rounded-full ${
+                          item.status === 'sent' ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' :
+                          item.status === 'failed' ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]' :
+                          'bg-primary/40'
+                        }`} />
+                        <span className="text-xs font-mono">{item.phone}</span>
+                        {item.status === 'failed' && <span className="text-[8px] text-red-500 font-bold ml-auto">GAGAL</span>}
+                        {item.status === 'sent' && <span className="text-[8px] text-green-500 font-bold ml-auto">OK</span>}
                       </div>
                     ))}
                     {parseRecipients(selectedBroadcast.recipients).length === 0 && (
