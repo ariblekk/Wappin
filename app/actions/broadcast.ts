@@ -14,7 +14,7 @@ export async function getBroadcasts() {
         if (!user) throw new Error("Unauthorized");
 
         const { databases } = await createSessionClient();
-        
+
         const broadcasts = await databases.listDocuments(
             DB_ID,
             COL_ID,
@@ -44,7 +44,7 @@ export async function createBroadcast(formData: {
         if (!user) throw new Error("Unauthorized");
 
         const { databases } = await createSessionClient();
-        
+
         // Clean and parse recipients
         const recipientList = formData.recipients
             .split(/[\n,]+/)
@@ -55,13 +55,13 @@ export async function createBroadcast(formData: {
 
         const isScheduled = !!formData.scheduleTime;
         const status = isScheduled ? "pending" : "processing";
-        const timestamp = isScheduled 
-            ? Math.floor(new Date(formData.scheduleTime!).getTime() / 1000) 
+        const timestamp = isScheduled
+            ? Math.floor(new Date(formData.scheduleTime!).getTime() / 1000)
             : Math.floor(Date.now() / 1000);
 
         // Create the broadcast record
         const recipientData = recipientList.map(phone => ({ phone, status: "pending" }));
-        
+
         const broadcast = await databases.createDocument(
             DB_ID,
             COL_ID,
@@ -100,14 +100,14 @@ export async function createBroadcast(formData: {
 }
 
 export async function processBroadcast(
-    broadcastId: string, 
-    deviceId: string, 
-    message: string, 
+    broadcastId: string,
+    deviceId: string,
+    message: string,
     recipients: string[]
 ) {
 
     const { databases } = await createAdminClient();
-    
+
     // Get current recipient data to update status per phone
     let recipientData: { phone: string, status: string }[] = [];
     try {
@@ -118,7 +118,7 @@ export async function processBroadcast(
         } else {
             recipientData = recipients.map(phone => ({ phone, status: "pending" }));
         }
-    } catch (e) {
+    } catch {
         recipientData = recipients.map(phone => ({ phone, status: "pending" }));
     }
 
@@ -205,7 +205,7 @@ function startBroadcastWorker() {
 
                     const recipientsData = JSON.parse(doc.recipients);
                     const recipients = Array.isArray(recipientsData) && typeof recipientsData[0] === 'object'
-                        ? recipientsData.map((r: any) => r.phone)
+                        ? recipientsData.map((r: { phone: string }) => r.phone)
                         : recipientsData;
 
                     // Jalankan proses broadcast di background

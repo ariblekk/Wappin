@@ -5,14 +5,15 @@ import { CheckCircle2, Zap, Shield, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
+import { Card } from "@/components/ui/card"
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Navigation */}
       <Navbar />
 
-      <main className="flex-1">
+      <main>
         {/* Hero Section */}
         <section className="py-24 md:py-32 container mx-auto px-4">
           <div className="flex flex-col items-center text-center gap-8 max-w-3xl mx-auto">
@@ -103,18 +104,18 @@ export default function LandingPage() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
   return (
-    <div className="p-8 rounded-2xl border bg-card hover:shadow-lg transition-shadow">
+    <Card className="p-8">
       <div className="mb-4">{icon}</div>
       <h3 className="text-xl font-bold mb-2">{title}</h3>
       <p className="text-muted-foreground">{description}</p>
-    </div>
+    </Card>
   )
 }
 
 function PricingCard({ title, price, description, features, featured = false }: { title: string, price: string, description: string, features: string[], featured?: boolean }) {
   return (
-    <div className={cn(
-      "p-8 rounded-2xl border flex flex-col gap-6",
+    <Card className={cn(
+      "p-8 flex flex-col gap-6",
       featured ? "border-primary shadow-xl scale-105 bg-card relative overflow-hidden" : "bg-card"
     )}>
       {featured && <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-4 py-1 text-xs font-bold uppercase tracking-wider">Most Popular</div>}
@@ -134,6 +135,6 @@ function PricingCard({ title, price, description, features, featured = false }: 
       <Button className="w-full mt-auto" variant={featured ? "default" : "outline"} asChild>
         <Link href="/login">Get Started</Link>
       </Button>
-    </div>
+    </Card>
   )
 }

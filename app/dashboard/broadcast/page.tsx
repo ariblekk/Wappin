@@ -3,7 +3,6 @@ import { getBroadcasts } from "@/app/actions/broadcast"
 import { getContacts } from "@/app/actions/contacts"
 import { BroadcastForm } from "@/components/broadcast/broadcast-form"
 import { BroadcastHistory, Broadcast as BroadcastType, Device as DeviceType } from "@/components/broadcast/broadcast-history"
-import { Separator } from "@/components/ui/separator"
 import { Models } from "node-appwrite"
 
 interface Device extends Models.Document {

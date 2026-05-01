@@ -4,8 +4,6 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import {
   Send,
-  Users,
-  MessageSquare,
   AlertCircle,
   Loader2,
   ChevronDown,
