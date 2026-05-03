@@ -9,10 +9,10 @@ import { BookOpen, Key, Smartphone, Send, Users, Code, Copy, Check, Zap, Message
 // ─── Reusable Components ─────────────────────────────────────────────────────
 
 const METHOD_COLORS: Record<string, string> = {
-  GET:    'bg-sky-500/10 text-sky-500 border-sky-500/20',
-  POST:   'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+  GET: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+  POST: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
   DELETE: 'bg-red-500/10 text-red-500 border-red-500/20',
-  PUT:    'bg-amber-500/10 text-amber-500 border-amber-500/20',
+  PUT: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
 };
 
 function MethodBadge({ method }: { method: string }) {
@@ -120,14 +120,15 @@ function Section({ id, icon: Icon, title, method, children }: {
 // ─── Nav items config ─────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  { href: '#auth',            icon: Key,          label: 'Autentikasi' },
-  { href: '#get-devices',     icon: Smartphone,   label: 'GET Devices' },
-  { href: '#post-send',       icon: Send,         label: 'POST Send Message' },
-  { href: '#post-broadcast',  icon: Users,        label: 'POST Broadcast' },
-  { href: '#get-broadcasts',  icon: RefreshCw,    label: 'GET Broadcasts' },
-  { href: '#post-autoreply',  icon: MessageSquare,label: 'POST Auto-Reply' },
-  { href: '#delete-autoreply',icon: Trash2,       label: 'DELETE Auto-Reply' },
-  { href: '#code-sample',     icon: Code,         label: 'Contoh Kode JS' },
+  { href: '#auth', icon: Key, label: 'Autentikasi' },
+  { href: '#get-devices', icon: Smartphone, label: 'GET Devices' },
+  { href: '#post-add-device', icon: Smartphone, label: 'POST Add Device' },
+  { href: '#post-send', icon: Send, label: 'POST Send Message' },
+  { href: '#post-broadcast', icon: Users, label: 'POST Broadcast' },
+  { href: '#get-broadcasts', icon: RefreshCw, label: 'GET Broadcasts' },
+  { href: '#post-autoreply', icon: MessageSquare, label: 'POST Auto-Reply' },
+  { href: '#delete-autoreply', icon: Trash2, label: 'DELETE Auto-Reply' },
+  { href: '#code-sample', icon: Code, label: 'Contoh Kode JS' },
 ];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -187,12 +188,12 @@ export default function DocsPage() {
                 </p>
                 <div className="bg-slate-900 text-white p-4 border">
                   <p className="text-xs text-slate-400 mb-2 font-bold uppercase tracking-wider">Base URL</p>
-                  <code className="text-primary font-mono">https://yourdomain.com/api/v1</code>
+                  <code className="text-primary font-mono">https://hi.blekprojects.my.id/api/v1</code>
                 </div>
                 <div className="bg-muted p-4 border space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Required Headers</p>
                   {[
-                    { key: 'x-api-key',    val: 'YOUR_API_KEY' },
+                    { key: 'x-api-key', val: 'YOUR_API_KEY' },
                     { key: 'Content-Type', val: 'application/json' },
                   ].map(({ key, val }) => (
                     <div key={key} className="flex justify-between items-center text-sm font-mono">
@@ -214,17 +215,36 @@ export default function DocsPage() {
                 <p className="text-muted-foreground text-sm">Mengambil daftar seluruh perangkat WhatsApp yang terdaftar beserta status koneksinya.</p>
                 <Endpoint method="GET" path="/devices" />
                 <CodeBlock id="res-devices">
-{`{
+                  {`{
   "success": true,
   "devices": [
     {
-      "$id": "69ed6856001fe0c999bf",
+      "id": "69ed6856001fe0c999bf",
       "name": "Admin CS",
       "waName": "Budi Santoso",
       "status": "connected",
-      "$createdAt": "2026-04-26T02:31:36.000Z"
+      "createdAt": "2026-04-26T02:31:36.000Z"
     }
   ]
+}`}
+                </CodeBlock>
+              </Section>
+
+              {/* ── POST ADD DEVICE ── */}
+              <Section id="post-add-device" icon={Smartphone} title="Add Device (QR)" method="POST">
+                <p className="text-muted-foreground text-sm">Menambahkan perangkat WhatsApp baru dan mendapatkan QR code untuk pairing secara instan.</p>
+                <Endpoint method="POST" path="/devices" />
+                <div className="bg-muted p-4 border">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Request Body</p>
+                  <ParamRow name="name" type="string" required desc="Nama perangkat (misal: 'CS Jakarta')" />
+                </div>
+                <CodeBlock id="res-add-device">
+                  {`{
+  "success": true,
+  "deviceId": "69ed6856001fe0c999bf",
+  "qr": "2@...",
+  "status": "connecting",
+  "message": "QR code generated successfully"
 }`}
                 </CodeBlock>
               </Section>
@@ -235,12 +255,12 @@ export default function DocsPage() {
                 <Endpoint method="POST" path="/send" />
                 <div className="bg-muted p-4 border">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Request Body</p>
-                  <ParamRow name="deviceId" type="string"  required desc="ID perangkat WhatsApp pengirim" />
-                  <ParamRow name="phone"    type="string"  required desc="Nomor tujuan (format internasional, misal: 6281234567890)" />
-                  <ParamRow name="message"  type="string"  required desc="Isi pesan teks" />
+                  <ParamRow name="deviceId" type="string" required desc="ID perangkat WhatsApp pengirim" />
+                  <ParamRow name="phone" type="string" required desc="Nomor tujuan (format internasional, misal: 6281234567890)" />
+                  <ParamRow name="message" type="string" required desc="Isi pesan teks" />
                 </div>
                 <CodeBlock id="res-send">
-{`{ "success": true, "message": "Pesan berhasil dikirim" }`}
+                  {`{ "success": true, "message": "Pesan berhasil dikirim" }`}
                 </CodeBlock>
               </Section>
 
@@ -250,14 +270,14 @@ export default function DocsPage() {
                 <Endpoint method="POST" path="/broadcast" />
                 <div className="bg-muted p-4 border">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Request Body</p>
-                  <ParamRow name="deviceId"     type="string"   required desc="ID perangkat pengirim" />
-                  <ParamRow name="name"         type="string"   required desc="Nama label kampanye" />
-                  <ParamRow name="message"      type="string"   required desc="Isi pesan untuk semua penerima" />
-                  <ParamRow name="recipients"   type="string[]" required desc="Array nomor telepon penerima" />
-                  <ParamRow name="scheduleTime" type="string"            desc="(Opsional) Jadwal pengiriman ISO 8601" />
+                  <ParamRow name="deviceId" type="string" required desc="ID perangkat pengirim" />
+                  <ParamRow name="name" type="string" required desc="Nama label kampanye" />
+                  <ParamRow name="message" type="string" required desc="Isi pesan untuk semua penerima" />
+                  <ParamRow name="recipients" type="string[]" required desc="Array nomor telepon penerima" />
+                  <ParamRow name="scheduleTime" type="string" desc="(Opsional) Jadwal pengiriman ISO 8601" />
                 </div>
                 <CodeBlock id="res-broadcast">
-{`{
+                  {`{
   "success": true,
   "broadcastId": "69edbba300065efd4756"
 }`}
@@ -269,7 +289,7 @@ export default function DocsPage() {
                 <p className="text-muted-foreground text-sm">Mengambil riwayat broadcast beserta progres pengiriman realtime.</p>
                 <Endpoint method="GET" path="/broadcasts" />
                 <CodeBlock id="res-broadcasts">
-{`{
+                  {`{
   "success": true,
   "broadcasts": [
     {
@@ -291,13 +311,13 @@ export default function DocsPage() {
                 <Endpoint method="POST" path="/auto-reply" />
                 <div className="bg-muted p-4 border">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Request Body</p>
-                  <ParamRow name="deviceId" type="string"          required desc="ID perangkat yang menerapkan aturan" />
-                  <ParamRow name="keyword"  type="string"          required desc="Kata kunci pemicu balasan" />
-                  <ParamRow name="response" type="string"          required desc="Isi pesan balasan" />
-                  <ParamRow name="type"     type="exact|contains"  required desc="'exact' = cocok penuh, 'contains' = mengandung kata" />
+                  <ParamRow name="deviceId" type="string" required desc="ID perangkat yang menerapkan aturan" />
+                  <ParamRow name="keyword" type="string" required desc="Kata kunci pemicu balasan" />
+                  <ParamRow name="response" type="string" required desc="Isi pesan balasan" />
+                  <ParamRow name="type" type="exact|contains" required desc="'exact' = cocok penuh, 'contains' = mengandung kata" />
                 </div>
                 <CodeBlock id="res-autoreply">
-{`{
+                  {`{
   "success": true,
   "reply": {
     "$id": "autoreply_abc123",
@@ -313,7 +333,7 @@ export default function DocsPage() {
                 <p className="text-muted-foreground text-sm">Menghapus aturan balasan otomatis berdasarkan ID.</p>
                 <Endpoint method="DELETE" path="/auto-reply/:id" />
                 <CodeBlock id="res-delete">
-{`{ "success": true, "message": "Auto-reply berhasil dihapus" }`}
+                  {`{ "success": true, "message": "Auto-reply berhasil dihapus" }`}
                 </CodeBlock>
               </Section>
 
@@ -321,7 +341,7 @@ export default function DocsPage() {
               <Section id="code-sample" icon={Code} title="Contoh Integrasi JavaScript">
                 <p className="text-muted-foreground text-sm">Contoh lengkap penggunaan semua endpoint menggunakan JavaScript Fetch API.</p>
                 <CodeBlock id="js-sample" lang="javascript">
-{`const BASE = 'https://yourdomain.com/api/v1';
+                  {`const BASE = 'https://yourdomain.com/api/v1';
 const HEADERS = {
   'Content-Type': 'application/json',
   'x-api-key': 'YOUR_API_KEY',
@@ -329,6 +349,16 @@ const HEADERS = {
 
 // GET: Daftar Perangkat
 const devices = await fetch(\`\${BASE}/devices\`, { headers: HEADERS }).then(r => r.json());
+
+// POST: Tambah Perangkat & Ambil QR
+const newDevice = await fetch(\`\${BASE}/devices\`, {
+  method: 'POST', headers: HEADERS,
+  body: JSON.stringify({ name: 'Admin Baru' }),
+}).then(r => r.json());
+
+if (newDevice.success && newDevice.qr) {
+  console.log('Scan QR ini:', newDevice.qr);
+}
 
 // POST: Kirim Pesan
 await fetch(\`\${BASE}/send\`, {
