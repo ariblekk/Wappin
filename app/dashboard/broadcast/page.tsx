@@ -3,15 +3,16 @@ import { getBroadcasts } from "@/app/actions/broadcast"
 import { getContacts } from "@/app/actions/contacts"
 import { BroadcastForm } from "@/components/broadcast/broadcast-form"
 import { BroadcastHistory, Broadcast as BroadcastType, Device as DeviceType } from "@/components/broadcast/broadcast-history"
-import { Models } from "node-appwrite"
 
-interface Device extends Models.Document {
+interface Device {
+  id: string;
   name: string;
   status: string;
   waName?: string;
 }
 
-interface Broadcast extends Models.Document {
+interface Broadcast {
+  id: string;
   name?: string;
   message: string;
   status: string;
@@ -21,9 +22,11 @@ interface Broadcast extends Models.Document {
   deviceId: string;
   recipients?: string;
   timestamp?: number;
+  createdAt: string;
 }
 
-interface Contact extends Models.Document {
+interface Contact {
+  id: string;
   name: string;
   phone: string;
   tags?: string;
@@ -46,8 +49,8 @@ export default async function BroadcastPage() {
           </div>
         </div>
         <BroadcastForm
-          devices={devices as unknown as { $id: string; name: string; status: string; waName?: string }[]}
-          contacts={contacts as unknown as { $id: string; name: string; phone: string; tags?: string }[]}
+          devices={devices as unknown as { id: string; name: string; status: string; waName?: string }[]}
+          contacts={contacts as unknown as { id: string; name: string; phone: string; tags?: string }[]}
         />
       </section>
 

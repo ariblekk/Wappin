@@ -26,7 +26,7 @@ import { createAutoReply, updateAutoReply } from "@/app/actions/auto-reply"
 import { toast } from "sonner"
 
 interface Device {
-  $id: string
+  id: string
   name: string
   waName?: string
 }
@@ -35,7 +35,7 @@ interface AutoReplyFormProps {
   devices: Device[]
   mode?: "create" | "edit"
   initialData?: {
-    $id: string
+    id: string
     keyword: string
     response: string
     type: string
@@ -60,7 +60,7 @@ export function AutoReplyForm({ devices, mode = "create", initialData }: AutoRep
 
     // Optimistic UI Dispatch
     const optimisticData = {
-      $id: isEdit && initialData ? initialData.$id : `temp-${Date.now()}`,
+      id: isEdit && initialData ? initialData.id : `temp-${Date.now()}`,
       keyword,
       response,
       type,
@@ -73,7 +73,7 @@ export function AutoReplyForm({ devices, mode = "create", initialData }: AutoRep
     setOpen(false) // Tutup instan
     
     const res = isEdit && initialData
-      ? await updateAutoReply(initialData.$id, { keyword, response, type, deviceId })
+      ? await updateAutoReply(initialData.id, { keyword, response, type, deviceId })
       : await createAutoReply({ keyword, response, type, deviceId })
 
     setLoading(false)
@@ -109,13 +109,13 @@ export function AutoReplyForm({ devices, mode = "create", initialData }: AutoRep
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="deviceId">Pilih Perangkat</Label>
-              <Select name="deviceId" defaultValue={initialData?.deviceId || (devices[0]?.$id)}>
+              <Select name="deviceId" defaultValue={initialData?.deviceId || (devices[0]?.id)}>
                 <SelectTrigger id="deviceId">
                   <SelectValue placeholder="Pilih perangkat WhatsApp" />
                 </SelectTrigger>
                 <SelectContent>
                   {devices.map((device) => (
-                    <SelectItem key={device.$id} value={device.$id}>
+                    <SelectItem key={device.id} value={device.id}>
                       {device.waName || device.name}
                     </SelectItem>
                   ))}

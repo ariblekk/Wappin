@@ -1,31 +1,27 @@
 "use server"
 
-import { createSessionClient, createAdminClient } from "@/lib/appwrite-server";
-import { Query, ID, Permission, Role } from "node-appwrite";
-import { getLoggedInUser } from "./auth";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 import { sendMessage } from "@/lib/whatsapp";
+import { Prisma } from "@prisma/client";
 
-const DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-const COL_ID = process.env.NEXT_PUBLIC_APPWRITE_BROADCASTS_COLLECTION_ID!;
+interface Recipient {
+    phone: string;
+    status: string;
+}
 
 export async function getBroadcasts() {
     try {
-        const user = await getLoggedInUser();
-        if (!user) throw new Error("Unauthorized");
+        const { userId } = await auth();
+        if (!userId) throw new Error("Unauthorized");
 
-        const { databases } = await createSessionClient();
+        const broadcasts = await prisma.broadcast.findMany({
+            where: { userId: userId },
+            include: { device: true },
+            orderBy: { createdAt: 'desc' }
+        });
 
-        const broadcasts = await databases.listDocuments(
-            DB_ID,
-            COL_ID,
-            [
-                Query.equal("userId", user.$id),
-                Query.orderDesc("$createdAt"),
-                Query.limit(50)
-            ]
-        );
-
-        return { success: true, broadcasts: broadcasts.documents };
+        return { success: true, broadcasts };
     } catch (error) {
         console.error("Error fetching broadcasts:", error);
         return { success: false, broadcasts: [] };
@@ -40,12 +36,9 @@ export async function createBroadcast(formData: {
     scheduleTime?: string;
 }) {
     try {
-        const user = await getLoggedInUser();
-        if (!user) throw new Error("Unauthorized");
+        const { userId } = await auth();
+        if (!userId) throw new Error("Unauthorized");
 
-        const { databases } = await createSessionClient();
-
-        // Clean and parse recipients
         const recipientList = formData.recipients
             .split(/[\n,]+/)
             .map(r => r.trim())
@@ -59,45 +52,35 @@ export async function createBroadcast(formData: {
             ? Math.floor(new Date(formData.scheduleTime!).getTime() / 1000)
             : Math.floor(Date.now() / 1000);
 
-        // Create the broadcast record
         const recipientData = recipientList.map(phone => ({ phone, status: "pending" }));
 
-        const broadcast = await databases.createDocument(
-            DB_ID,
-            COL_ID,
-            ID.unique(),
-            {
+        const broadcast = await prisma.broadcast.create({
+            data: {
                 deviceId: formData.deviceId,
-                userId: user.$id,
+                userId: userId,
                 name: formData.name,
-                title: formData.name, // Map to title for compatibility
                 message: formData.message,
-                body: formData.message, // Map to body for compatibility
-                recipients: JSON.stringify(recipientData),
+                recipients: recipientData as unknown as Prisma.InputJsonValue,
                 status: status,
                 total: recipientList.length,
                 sent: 0,
                 failed: 0,
                 timestamp: timestamp
-            },
-            [
-                Permission.read(Role.user(user.$id)),
-                Permission.update(Role.user(user.$id)),
-                Permission.delete(Role.user(user.$id)),
-            ]
-        );
+            }
+        });
 
-        // Start sending in background if not scheduled
         if (!isScheduled) {
-            processBroadcast(broadcast.$id, formData.deviceId, formData.message, recipientList);
+            processBroadcast(broadcast.id, formData.deviceId, formData.message, recipientList);
         }
 
-        return { success: true, broadcastId: broadcast.$id };
+        return { success: true, broadcastId: broadcast.id };
     } catch (error) {
         console.error("Error creating broadcast:", error);
         return { success: false, error: (error as Error).message };
     }
 }
+// Rest of file remains same...
+
 
 export async function processBroadcast(
     broadcastId: string,
@@ -105,25 +88,9 @@ export async function processBroadcast(
     message: string,
     recipients: string[]
 ) {
-
-    const { databases } = await createAdminClient();
-
-    // Get current recipient data to update status per phone
-    let recipientData: { phone: string, status: string }[] = [];
-    try {
-        const doc = await databases.getDocument(DB_ID, COL_ID, broadcastId);
-        const parsed = JSON.parse(doc.recipients);
-        if (Array.isArray(parsed) && typeof parsed[0] === 'object') {
-            recipientData = parsed;
-        } else {
-            recipientData = recipients.map(phone => ({ phone, status: "pending" }));
-        }
-    } catch {
-        recipientData = recipients.map(phone => ({ phone, status: "pending" }));
-    }
-
     let sentCount = 0;
     let failedCount = 0;
+    const recipientData: Recipient[] = recipients.map(phone => ({ phone, status: "pending" }));
 
     for (let i = 0; i < recipients.length; i++) {
         const recipient = recipients[i];
@@ -131,96 +98,72 @@ export async function processBroadcast(
         try {
             await sendMessage(deviceId, recipient, message);
             sentCount++;
-            if (recipientData[i]) recipientData[i].status = "sent";
-
+            recipientData[i].status = "sent";
         } catch (error) {
             console.error(`[Broadcast ${broadcastId}] Failed for ${recipient}:`, error);
             failedCount++;
-            if (recipientData[i]) recipientData[i].status = "failed";
+            recipientData[i].status = "failed";
         }
 
-        // Update progress and per-phone status in Appwrite
         try {
-            await databases.updateDocument(DB_ID, COL_ID, broadcastId, {
-                sent: sentCount,
-                failed: failedCount,
-                recipients: JSON.stringify(recipientData)
+            await prisma.broadcast.update({
+                where: { id: broadcastId },
+                data: {
+                    sent: sentCount,
+                    failed: failedCount,
+                    recipients: recipientData as unknown as Prisma.InputJsonValue
+                }
             });
         } catch (e) {
             console.error(`[Broadcast ${broadcastId}] Failed to update progress:`, e);
         }
 
-        // Delay to avoid being flagged as spam (2-5 seconds)
         if (sentCount + failedCount < recipients.length) {
             await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
         }
     }
 
-    // Mark as completed
     try {
-        await databases.updateDocument(DB_ID, COL_ID, broadcastId, {
-            status: "completed"
+        await prisma.broadcast.update({
+            where: { id: broadcastId },
+            data: { status: "completed" }
         });
     } catch (e) {
         console.error(`[Broadcast ${broadcastId}] Failed to mark as completed:`, e);
     }
 }
 
-declare global {
-    var broadcastWorkerStarted: boolean | undefined;
-}
-
-let workerStarted = globalThis.broadcastWorkerStarted || false;
-
-function startBroadcastWorker() {
-    if (workerStarted) return;
-    workerStarted = true;
-    if (process.env.NODE_ENV !== 'production') {
-        globalThis.broadcastWorkerStarted = true;
-    }
-
-    // Jalankan setiap 30 detik
-    setInterval(async () => {
-        try {
-            const { databases } = await createAdminClient();
-            const now = Math.floor(Date.now() / 1000);
-
-            // Cari broadcast yang dijadwalkan dan sudah jatuh tempo
-            const scheduledBroadcasts = await databases.listDocuments(
-                DB_ID,
-                COL_ID,
-                [
-                    Query.equal("status", "pending"),
-                    Query.lessThanEqual("timestamp", now),
-                    Query.limit(10)
-                ]
-            );
-
-            for (const doc of scheduledBroadcasts.documents) {
-                try {
-                    // Update status menjadi processing agar tidak diambil lagi oleh worker lain
-                    await databases.updateDocument(DB_ID, COL_ID, doc.$id, {
-                        status: "processing"
-                    });
-
-                    const recipientsData = JSON.parse(doc.recipients);
-                    const recipients = Array.isArray(recipientsData) && typeof recipientsData[0] === 'object'
-                        ? recipientsData.map((r: { phone: string }) => r.phone)
-                        : recipientsData;
-
-                    // Jalankan proses broadcast di background
-                    processBroadcast(doc.$id, doc.deviceId, doc.message || doc.body, recipients);
-                } catch (err) {
-                    console.error(`[Worker] Gagal memproses broadcast terjadwal ${doc.$id}:`, err);
-                }
-            }
-        } catch {
-            // Abaikan error koneksi database berkala
-        }
-    }, 30000);
-}
-
-// Jalankan worker secara otomatis saat modul dimuat di server
+// Background Worker logic
 if (typeof window === 'undefined') {
-    startBroadcastWorker();
+    const globalAny = globalThis as unknown as { broadcastWorkerStarted: boolean };
+    if (!globalAny.broadcastWorkerStarted) {
+        globalAny.broadcastWorkerStarted = true;
+        
+        setInterval(async () => {
+            try {
+                const now = Math.floor(Date.now() / 1000);
+                const scheduledBroadcasts = await prisma.broadcast.findMany({
+                    where: {
+                        status: "pending",
+                        timestamp: { lte: now }
+                    },
+                    take: 10
+                });
+
+                for (const doc of scheduledBroadcasts) {
+                    try {
+                        await prisma.broadcast.update({
+                            where: { id: doc.id },
+                            data: { status: "processing" }
+                        });
+
+                        const recipients = (doc.recipients as unknown as Recipient[]).map(r => r.phone);
+                        processBroadcast(doc.id, doc.deviceId, doc.message, recipients);
+                    } catch (err) {
+                        console.error(`[Worker] Gagal memproses broadcast terjadwal ${doc.id}:`, err);
+                    }
+                }
+            } catch {}
+        }, 30000);
+    }
 }

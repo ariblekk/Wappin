@@ -122,8 +122,6 @@ import { CheckCircle2, ArrowRight } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Models } from "appwrite"
-import { client } from "@/lib/appwrite-client"
 
 interface ReconnectQRDialogProps {
   open: boolean
@@ -131,7 +129,7 @@ interface ReconnectQRDialogProps {
   deviceId: string
 }
 
-interface Device extends Models.Document {
+interface Device {
   status: string
   name: string
   qr?: string
@@ -184,19 +182,8 @@ function ReconnectQRDialog({ open, onOpenChange, deviceId }: ReconnectQRDialogPr
       }
     }, 2000)
 
-    // Realtime sebagai jalur cepat
-    const unsubscribe = client.subscribe(
-      `databases.${process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID}.collections.${process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID}.documents.${deviceId}`,
-      (response) => {
-        const payload = response.payload as Device
-        if (payload.qr) setQrCode(payload.qr)
-        if (payload.status === "connected") handleConnected()
-      }
-    )
-
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
-      unsubscribe()
     }
   }, [open, deviceId, handleConnected])
 

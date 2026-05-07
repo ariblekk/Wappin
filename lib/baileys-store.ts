@@ -7,7 +7,7 @@ import fs from 'fs';
  * useMultiFileAuthState digunakan sebagai dasar penyimpanan permanen, 
  * namun performa ditingkatkan dengan makeCacheableSignalKeyStore di sisi socket.
  */
-export async function getAppwriteAuthState(deviceId: string) {
+export async function getAuthState(deviceId: string) {
     // Tentukan direktori penyimpanan session
     const sessionsDir = path.join(process.cwd(), 'storage', 'whatsapp-sessions');
     const sessionDir = path.join(sessionsDir, deviceId);

@@ -43,3 +43,5 @@ next-env.d.ts
 # WhatsApp Sessions
 /storage
 
+
+/lib/generated/prisma

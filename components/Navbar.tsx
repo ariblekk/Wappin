@@ -4,8 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GalleryVerticalEndIcon } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 export function Navbar() {
+    const { isLoaded, isSignedIn } = useUser();
+
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -19,12 +22,17 @@ export function Navbar() {
                     <Link href="/docs" className="hover:text-primary transition-colors">Docs</Link>
                 </nav>
                 <div className="flex items-center gap-4">
-                    <Button asChild variant="ghost" className="hidden sm:flex">
-                        <Link href="/login">Login</Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/login">Get Started</Link>
-                    </Button>
+                    {isLoaded && isSignedIn ? (
+                        <Button asChild>
+                            <Link href="/dashboard">Dashboard</Link>
+                        </Button>
+                    ) : (
+                        <>
+                            <Button asChild className="hidden sm:flex">
+                                <Link href="/login">Login</Link>
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </header>

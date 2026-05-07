@@ -19,7 +19,7 @@ export default async function ContactsPage() {
       </div>
 
 
-      <ContactList contacts={contacts as unknown as { $id: string; name: string; phone: string; tags: string; $createdAt: string }[]} />
+      <ContactList contacts={contacts as unknown as { id: string; name: string; phone: string; tags: string; createdAt: string }[]} />
     </div>
   )
 }

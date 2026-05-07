@@ -20,7 +20,7 @@ import { toast } from "sonner"
 interface ContactFormProps {
   mode?: "create" | "edit"
   initialData?: {
-    $id: string
+    id: string
     name: string
     phone: string
     tags?: string
@@ -43,7 +43,7 @@ export function ContactForm({ mode = "create", initialData }: ContactFormProps) 
     const tags = formData.get("tags") as string
 
     const res = isEdit && initialData
-      ? await updateContact(initialData.$id, { name, phone, tags })
+      ? await updateContact(initialData.id, { name, phone, tags })
       : await createContact({ name, phone, tags })
 
     setLoading(false)

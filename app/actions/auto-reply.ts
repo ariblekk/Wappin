@@ -1,31 +1,21 @@
 "use server"
 
-import { createSessionClient } from "@/lib/appwrite-server";
-import { Query, ID, Permission, Role } from "node-appwrite";
-import { getLoggedInUser } from "./auth";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-
-const DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-const COL_ID = "auto_replies";
 
 export async function getAutoReplies() {
     try {
-        const user = await getLoggedInUser();
-        if (!user) throw new Error("Unauthorized");
+        const { userId } = await auth();
+        if (!userId) throw new Error("Unauthorized");
 
-        const { databases } = await createSessionClient();
-        
-        const replies = await databases.listDocuments(
-            DB_ID,
-            COL_ID,
-            [
-                Query.equal("userId", user.$id),
-                Query.orderDesc("$createdAt"),
-                Query.limit(100)
-            ]
-        );
+        const replies = await prisma.autoReply.findMany({
+            where: { userId: userId },
+            include: { device: true },
+            orderBy: { createdAt: 'desc' }
+        });
 
-        return { success: true, replies: replies.documents };
+        return { success: true, replies };
     } catch (error) {
         console.error("Error fetching auto-replies:", error);
         return { success: false, replies: [] };
@@ -35,32 +25,22 @@ export async function getAutoReplies() {
 export async function createAutoReply(data: { 
     keyword: string; 
     response: string; 
-    type: "exact" | "contains";
+    type: string;
     deviceId: string;
 }) {
     try {
-        const user = await getLoggedInUser();
-        if (!user) throw new Error("Unauthorized");
+        const { userId } = await auth();
+        if (!userId) throw new Error("Unauthorized");
 
-        const { databases } = await createSessionClient();
-
-        await databases.createDocument(
-            DB_ID,
-            COL_ID,
-            ID.unique(),
-            {
+        await prisma.autoReply.create({
+            data: {
                 keyword: data.keyword,
                 response: data.response,
                 type: data.type,
                 deviceId: data.deviceId,
-                userId: user.$id
-            },
-            [
-                Permission.read(Role.user(user.$id)),
-                Permission.update(Role.user(user.$id)),
-                Permission.delete(Role.user(user.$id)),
-            ]
-        );
+                userId: userId
+            }
+        });
 
         revalidatePath("/dashboard/auto-reply");
         return { success: true };
@@ -73,26 +53,22 @@ export async function createAutoReply(data: {
 export async function updateAutoReply(id: string, data: { 
     keyword: string; 
     response: string; 
-    type: "exact" | "contains";
+    type: string;
     deviceId: string;
 }) {
     try {
-        const user = await getLoggedInUser();
-        if (!user) throw new Error("Unauthorized");
+        const { userId } = await auth();
+        if (!userId) throw new Error("Unauthorized");
 
-        const { databases } = await createSessionClient();
-
-        await databases.updateDocument(
-            DB_ID,
-            COL_ID,
-            id,
-            {
+        await prisma.autoReply.update({
+            where: { id },
+            data: {
                 keyword: data.keyword,
                 response: data.response,
                 type: data.type,
                 deviceId: data.deviceId
             }
-        );
+        });
 
         revalidatePath("/dashboard/auto-reply");
         return { success: true };
@@ -104,12 +80,12 @@ export async function updateAutoReply(id: string, data: {
 
 export async function deleteAutoReply(id: string) {
     try {
-        const user = await getLoggedInUser();
-        if (!user) throw new Error("Unauthorized");
+        const { userId } = await auth();
+        if (!userId) throw new Error("Unauthorized");
 
-        const { databases } = await createSessionClient();
-        
-        await databases.deleteDocument(DB_ID, COL_ID, id);
+        await prisma.autoReply.delete({
+            where: { id }
+        });
 
         revalidatePath("/dashboard/auto-reply");
         return { success: true };
@@ -118,3 +94,4 @@ export async function deleteAutoReply(id: string) {
         return { success: false, error: (error as Error).message };
     }
 }
+

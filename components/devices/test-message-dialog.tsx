@@ -24,13 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Models } from "node-appwrite"
 
 interface TestMessageDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   deviceId: string
   deviceName: string
+}
+
+interface Contact {
+  id: string
+  name: string
+  phone: string
 }
 
 export function TestMessageDialog({
@@ -43,7 +48,7 @@ export function TestMessageDialog({
   const [to, setTo] = React.useState("")
   const [message, setMessage] = React.useState("Halo, ini pesan test dari Wapping! 👋")
   const [count, setCount] = React.useState(1)
-  const [contacts, setContacts] = React.useState<Models.Document[]>([])
+  const [contacts, setContacts] = React.useState<Contact[]>([])
 
   React.useEffect(() => {
     if (open) {
@@ -157,7 +162,7 @@ export function TestMessageDialog({
                     </SelectTrigger>
                     <SelectContent position="popper" align="end" sideOffset={4} className="w-[250px]">
                       {contacts.map((contact) => (
-                        <SelectItem key={contact.$id} value={contact.phone}>
+                        <SelectItem key={contact.id} value={contact.phone}>
                           <span className="text-xs">{contact.name}</span>
                           <span className="text-[10px] text-muted-foreground ml-2">({contact.phone})</span>
                         </SelectItem>

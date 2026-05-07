@@ -20,10 +20,8 @@ import { QRCodeSVG } from "qrcode.react"
 import { Loader2, QrCode, Smartphone, CheckCircle2, ArrowRight } from "lucide-react"
 import { createDevice, getDevice } from "@/app/actions/devices"
 import { initiateWhatsApp } from "@/app/actions/whatsapp"
-import { client } from "@/lib/appwrite-client"
-import { Models } from "appwrite"
 
-interface Device extends Models.Document {
+interface Device {
   name: string
   status: string
   qr?: string
@@ -60,21 +58,6 @@ export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
   }, [router])
 
 
-  // Realtime listener
-  React.useEffect(() => {
-    if (!deviceId || step !== "qr") return
-
-    const unsubscribe = client.subscribe(
-      `databases.${process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID}.collections.${process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID}.documents.${deviceId}`,
-      (response) => {
-        const payload = response.payload as Device
-        if (payload.qr) setQrCode(payload.qr)
-        if (payload.status === "connected") handleConnected(deviceId)
-      }
-    )
-
-    return () => unsubscribe()
-  }, [deviceId, step, handleConnected])
 
   const handleCreate = async () => {
     if (!name) return

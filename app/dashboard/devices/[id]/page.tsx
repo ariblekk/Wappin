@@ -19,14 +19,14 @@ import { DeviceActionButton } from "@/components/devices/device-action-button"
 import { MessageLogTable, type MessageDocument } from "@/components/devices/message-log-table"
 
 interface Device {
-  $id: string
+  id: string
   name: string
   status: string
   phone?: string
   waName?: string
   waImage?: string
   userId: string
-  $createdAt: string
+  createdAt: string
 }
 
 export default async function DeviceDetailPage({
@@ -108,7 +108,7 @@ export default async function DeviceDetailPage({
                     label="Device ID"
                     value={
                       <span className="flex items-center gap-1.5 font-mono text-sm">
-                        {device.$id}
+                        {device.id}
                         <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground">
                           <Copy className="size-3" />
                         </Button>
@@ -157,7 +157,7 @@ export default async function DeviceDetailPage({
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 pt-1">
                   <DeviceActionButton
-                    deviceId={device.$id}
+                    deviceId={device.id}
                     deviceName={device.name}
                     status={device.status}
                   />
@@ -168,7 +168,7 @@ export default async function DeviceDetailPage({
 
           <TabsContent value="messages" className="mt-0">
             <Card>
-              <MessageLogTable initialMessages={messages as unknown as MessageDocument[]} deviceId={device.$id} />
+              <MessageLogTable initialMessages={messages as unknown as MessageDocument[]} deviceId={device.id} />
             </Card>
           </TabsContent>
         </Tabs>

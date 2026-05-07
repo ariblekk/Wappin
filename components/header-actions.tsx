@@ -18,14 +18,14 @@ export function HeaderActions() {
   const [isAddDeviceOpen, setIsAddDeviceOpen] = React.useState(false)
   const [isTestOpen, setIsTestOpen] = React.useState(false)
   const [deviceData, setDeviceData] = React.useState<{ id: string, name: string } | null>(null)
-  const [devices, setDevices] = React.useState<{ $id: string; name: string; waName?: string }[]>([])
+  const [devices, setDevices] = React.useState<{ id: string; name: string; waName?: string }[]>([])
 
 
   React.useEffect(() => {
     if (pathname === "/dashboard/auto-reply") {
       getDevices().then(res => {
         if (res.success && res.devices) {
-          setDevices(res.devices as unknown as { $id: string; name: string; waName?: string }[])
+          setDevices(res.devices as unknown as { id: string; name: string; waName?: string }[])
         }
       })
     }
@@ -48,7 +48,7 @@ export function HeaderActions() {
     if (isDetailPage && currentDeviceId) {
       getDevice(currentDeviceId).then(res => {
         if (res.success && res.device) {
-          setDeviceData({ id: res.device.$id, name: res.device.name })
+          setDeviceData({ id: res.device.id, name: res.device.name })
         }
       })
     }

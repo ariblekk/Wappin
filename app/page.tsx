@@ -1,3 +1,5 @@
+"use client"
+
 import React from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -6,8 +8,10 @@ import { cn } from "@/lib/utils"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
 import { Card } from "@/components/ui/card"
+import { useUser } from "@clerk/nextjs"
 
 export default function LandingPage() {
+  const { isLoaded, isSignedIn } = useUser()
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -27,9 +31,15 @@ export default function LandingPage() {
               Send broadcasts, automate notifications, and integrate WhatsApp into your apps seamlessly with our premium SaaS platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild className="h-12 px-8">
-                <Link href="/login">Start Free Trial</Link>
-              </Button>
+              {isLoaded && isSignedIn ? (
+                <Button size="lg" asChild className="h-12 px-8">
+                  <Link href="/dashboard">Go to Dashboard</Link>
+                </Button>
+              ) : (
+                <Button size="lg" asChild className="h-12 px-8">
+                  <Link href="/login">Start Free Trial</Link>
+                </Button>
+              )}
               <Button size="lg" variant="outline" className="h-12 px-8" asChild>
                 <Link href="/docs">View Documentation</Link>
               </Button>
@@ -60,7 +70,7 @@ export default function LandingPage() {
               <FeatureCard
                 icon={<Shield className="size-10 text-primary" />}
                 title="Secure & Reliable"
-                description="Enterprise-grade security with Appwrite and Baileys for stable connections."
+                description="Enterprise-grade security with Prisma and Baileys for stable connections."
               />
             </div>
           </div>

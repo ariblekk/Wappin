@@ -5,11 +5,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { MessageSquare, RefreshCw } from "lucide-react"
-import { client } from "@/lib/appwrite-client"
 import { getDeviceMessages } from "@/app/actions/devices"
 
 export interface MessageDocument {
-  $id: string
+  id: string
   to: string
   body: string
   status: string
@@ -41,37 +40,6 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
   }
 
   React.useEffect(() => {
-    const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!
-    const collectionId = process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!
-
-    // Subscribe ke perubahan koleksi messages
-    const unsubscribe = client.subscribe(
-      `databases.${databaseId}.collections.${collectionId}.documents`,
-      (response) => {
-        const payload = response.payload as MessageDocument
-
-        // Pastikan pesan ini milik device yang sedang dibuka
-        // Karena subscription tingkat koleksi akan menerima semua dokumen baru
-        if (payload.deviceId !== deviceId) return
-
-        const isCreate = response.events.some((e) => e.includes(".create"))
-        const isUpdate = response.events.some((e) => e.includes(".update"))
-
-        if (isCreate) {
-          setMessages((prev) => {
-            // Hindari duplikasi jika dokumen sudah ada
-            if (prev.some((m) => m.$id === payload.$id)) return prev
-            // Hapus pesan optimistic yang sesuai (pending, body sama, tujuan sama)
-            const filtered = prev.filter(m => !(m.$id.startsWith('temp-') && m.body === payload.body && m.to === payload.to))
-            return [payload, ...filtered]
-          })
-        } else if (isUpdate) {
-          setMessages((prev) =>
-            prev.map((m) => (m.$id === payload.$id ? payload : m))
-          )
-        }
-      }
-    )
 
     // Listener untuk optimistic message dari UI
     const handleOptimistic = (e: Event) => {
@@ -85,7 +53,6 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
     window.addEventListener('optimistic-message', handleOptimistic)
 
     return () => {
-      unsubscribe()
       window.removeEventListener('optimistic-message', handleOptimistic)
     }
   }, [deviceId])
@@ -157,7 +124,7 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
           </thead>
           <tbody className="divide-y text-sm">
             {messages.map((msg) => (
-              <tr key={msg.$id} className="hover:bg-muted/10 transition-colors">
+              <tr key={msg.id} className="hover:bg-muted/10 transition-colors">
                 <td className="py-3 px-4 font-mono font-semibold text-foreground/80">+{msg.to}</td>
                 <td className="py-3 px-4 max-w-[200px] sm:max-w-xs truncate text-muted-foreground" title={msg.body}>
                   {msg.body}

@@ -2,6 +2,32 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
+import { useUser, useClerk } from "@clerk/nextjs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { 
+  LayoutGrid, 
+  MessageSquare, 
+  Radio, 
+  Undo2, 
+  Clock, 
+  Fingerprint, 
+  Wrench, 
+  Search, 
+  Users,
+  ChevronsUpDown,
+  LogOut,
+  User as UserIcon,
+  Settings
+} from "lucide-react"
+import Link from "next/link"
 import {
   Sidebar,
   SidebarContent,
@@ -14,17 +40,6 @@ import {
   SidebarMenuItem,
   SidebarInput,
 } from "@/components/ui/sidebar"
-import {
-  LayoutGrid,
-  MessageSquare,
-  Radio,
-  Undo2,
-  Clock,
-  Fingerprint,
-  Wrench,
-  Search,
-  Users,
-} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const data = {
@@ -92,10 +107,10 @@ const data = {
   ],
 }
 
-import { NavUser } from "@/components/nav-user"
-
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: { name: string, email: string, avatar: string } }) {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { user } = useUser()
+  const { signOut } = useClerk()
 
   return (
     <Sidebar variant="floating" {...props}>
@@ -149,7 +164,72 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground h-auto p-2 bg-muted/30 border border-primary/5 hover:bg-muted/50 transition-colors"
+                >
+                  <Avatar className="h-8 w-8 rounded-lg border border-primary/10">
+                    <AvatarImage src={user?.imageUrl} alt={user?.fullName || ""} />
+                    <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
+                      {(user?.firstName || "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight ml-2 overflow-hidden">
+                    <span className="truncate font-bold">{user?.fullName || user?.username || "User"}</span>
+                    <span className="truncate text-[10px] text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/50" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-xl p-2"
+                side="top"
+                align="end"
+                sideOffset={8}
+              >
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-3 px-2 py-1.5 text-left text-sm">
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage src={user?.imageUrl} alt={user?.fullName || ""} />
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
+                        {(user?.firstName || "U").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-bold">{user?.fullName || user?.username}</span>
+                      <span className="truncate text-xs text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="my-2" />
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                  <Link href="/dashboard/account" className="flex items-center gap-2">
+                    <UserIcon className="size-4" />
+                    <span>Akun & Profil</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                  <Link href="/dashboard/tools" className="flex items-center gap-2">
+                    <Settings className="size-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-2" />
+                <DropdownMenuItem 
+                  onClick={() => signOut()} 
+                  className="rounded-lg cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                >
+                  <LogOut className="size-4 mr-2" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )

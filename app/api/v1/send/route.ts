@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserIdByApiKey } from '@/app/actions/profiles';
-import { createAdminClient } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import prisma from '@/lib/prisma';
 import { sendMessage } from '@/lib/whatsapp';
 
 export async function POST(request: Request) {
@@ -25,25 +24,28 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Missing phone or message in request body" }, { status: 400 });
         }
 
-        const { databases } = await createAdminClient();
-
         // Cari deviceId jika tidak disertakan
         let targetDeviceId = deviceId;
         if (!targetDeviceId) {
-            const devices = await databases.listDocuments(
-                process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-                process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
-                [
-                    Query.equal("userId", userId),
-                    Query.equal("status", "connected"),
-                    Query.limit(1)
-                ]
-            );
+            const device = await prisma.device.findFirst({
+                where: {
+                    userId: userId,
+                    status: "connected"
+                }
+            });
 
-            if (devices.documents.length === 0) {
+            if (!device) {
                 return NextResponse.json({ success: false, error: "No connected WhatsApp device found for this account" }, { status: 400 });
             }
-            targetDeviceId = devices.documents[0].$id;
+            targetDeviceId = device.id;
+        } else {
+            // Validasi kepemilikan device
+            const device = await prisma.device.findUnique({
+                where: { id: targetDeviceId }
+            });
+            if (!device || device.userId !== userId) {
+                return NextResponse.json({ success: false, error: "Forbidden: Device not found or not owned by you" }, { status: 403 });
+            }
         }
 
         // Format nomor telepon
@@ -54,56 +56,17 @@ export async function POST(request: Request) {
                 ? cleanPhone 
                 : '62' + cleanPhone;
 
-        const jid = `${finalPhone}@s.whatsapp.net`;
-
-        // Simpan log awal (pending)
-        const messageDoc = await databases.createDocument(
-            process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-            process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
-            'unique()',
-            {
-                deviceId: targetDeviceId,
-                userId: userId,
-                to: finalPhone,
-                body: message,
-                status: 'pending',
-                sentAt: new Date().toISOString()
-            }
-        );
-
-        // Kirim pesan
+        // Kirim pesan (sendMessage sudah menangani logging ke Prisma)
         try {
-            const sendResult = await sendMessage(targetDeviceId, jid, message);
+            const sendResult = await sendMessage(targetDeviceId, finalPhone, message);
             
             if (sendResult.success) {
-                // Update ke sent
-                await databases.updateDocument(
-                    process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-                    process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
-                    messageDoc.$id,
-                    { status: 'sent' }
-                );
                 return NextResponse.json({ success: true, message: "Pesan berhasil dikirim" });
             } else {
-                const errorMsg = (sendResult as unknown as { error?: string }).error || "Gagal mengirim pesan";
-                // Update ke failed
-                await databases.updateDocument(
-                    process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-                    process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
-                    messageDoc.$id,
-                    { status: 'failed', error: errorMsg.slice(0, 500) }
-                );
-                return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+                return NextResponse.json({ success: false, error: "Gagal mengirim pesan" }, { status: 500 });
             }
         } catch (sendError) {
             const errorMsg = (sendError as Error).message || "Gagal mengirim pesan";
-            // Update ke failed
-            await databases.updateDocument(
-                process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-                process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID!,
-                messageDoc.$id,
-                { status: 'failed', error: errorMsg.slice(0, 500) }
-            );
             return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
         }
 

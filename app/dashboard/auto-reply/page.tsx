@@ -24,8 +24,8 @@ export default async function AutoReplyPage() {
 
 
       <AutoReplyList 
-        replies={replies as unknown as { $id: string; keyword: string; response: string; type: "exact" | "contains"; deviceId: string; $createdAt: string }[]} 
-        devices={devices as unknown as { $id: string; name: string; waName?: string }[]} 
+        replies={replies as unknown as { id: string; keyword: string; response: string; type: "exact" | "contains"; deviceId: string; createdAt: string }[]} 
+        devices={devices as unknown as { id: string; name: string; waName?: string }[]} 
       />
     </div>
   )

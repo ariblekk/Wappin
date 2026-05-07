@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { getProfile, regenerateApiKey, updateUserName } from "@/app/actions/profiles"
-import { getLoggedInUser } from "@/app/actions/auth"
+import { getProfile, regenerateApiKey } from "@/app/actions/profiles"
+import { useUser } from "@clerk/nextjs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,21 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Key, Copy, RefreshCw, Shield, User, Zap, Mail, Edit2, Check, X } from "lucide-react"
 
 interface ProfileData {
-  $id: string;
+  id: string;
   user_code: string;
   plan: string;
   apikey: string;
 }
 
-interface UserData {
-  $id: string;
-  name: string;
-  email: string;
-}
-
 export default function AccountPage() {
+  const { isLoaded, user, isSignedIn } = useUser()
   const [profile, setProfile] = React.useState<ProfileData | null>(null)
-  const [user, setUser] = React.useState<UserData | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [regenLoading, setRegenLoading] = React.useState(false)
   const [isEditingName, setIsEditingName] = React.useState(false)
@@ -33,28 +27,31 @@ export default function AccountPage() {
   const [updateLoading, setUpdateLoading] = React.useState(false)
 
   React.useEffect(() => {
+    if (isLoaded && isSignedIn && !newName && !loading) {
+        setTimeout(() => setNewName(user?.firstName || user?.username || ""), 0)
+    }
+  }, [isLoaded, isSignedIn, user, newName, loading])
+
+  React.useEffect(() => {
     async function loadData() {
       try {
-        const [profileRes, userRes] = await Promise.all([
-          getProfile(),
-          getLoggedInUser()
-        ])
-
+        const profileRes = await getProfile()
         if (profileRes.success && profileRes.profile) {
           setProfile(profileRes.profile as unknown as ProfileData)
         }
-        if (userRes) {
-          setUser(userRes as unknown as UserData)
-          setNewName(userRes.name || "")
-        }
       } catch {
-        toast.error("Gagal memuat data")
+        toast.error("Gagal memuat profil API")
       } finally {
         setLoading(false)
       }
     }
-    loadData()
-  }, [])
+    
+    if (isLoaded && isSignedIn) {
+        loadData()
+    } else if (isLoaded && !isSignedIn) {
+        setTimeout(() => setLoading(false), 0)
+    }
+  }, [isLoaded, isSignedIn])
 
   async function handleUpdateName() {
     if (!newName.trim()) {
@@ -63,16 +60,19 @@ export default function AccountPage() {
     }
     
     setUpdateLoading(true)
-    const res = await updateUserName(newName)
-    if (res.success) {
-      setUser(prev => prev ? { ...prev, name: newName } : null)
-      setIsEditingName(false)
-      toast.success("Nama berhasil diperbarui!")
-    } else {
-      toast.error("Gagal memperbarui nama")
+    try {
+        await user?.update({
+            firstName: newName,
+        })
+        setIsEditingName(false)
+        toast.success("Nama berhasil diperbarui!")
+    } catch {
+        toast.error("Gagal memperbarui nama")
+    } finally {
+        setUpdateLoading(false)
     }
-    setUpdateLoading(false)
   }
+
 
   async function handleRegenerate() {
     if (!confirm("Apakah Anda yakin ingin membuat ulang API Key? API Key lama tidak akan bisa digunakan lagi.")) {
@@ -165,7 +165,7 @@ export default function AccountPage() {
                           className="h-6 px-2 text-red-600 hover:text-red-600 hover:bg-red-100"
                           onClick={() => {
                             setIsEditingName(false)
-                            setNewName(user?.name || "")
+                            setNewName(user?.fullName || "")
                           }}
                           disabled={updateLoading}
                         >
@@ -175,7 +175,7 @@ export default function AccountPage() {
                     )}
                   </div>
                   {!isEditingName ? (
-                    <p className="text-md font-bold">{user?.name || "User"}</p>
+                    <p className="text-md font-bold">{user?.fullName || "User"}</p>
                   ) : (
                     <Input 
                       value={newName}
@@ -186,7 +186,7 @@ export default function AccountPage() {
                         if (e.key === 'Enter') handleUpdateName()
                         if (e.key === 'Escape') {
                           setIsEditingName(false)
-                          setNewName(user?.name || "")
+                          setNewName(user?.fullName || "")
                         }
                       }}
                     />
@@ -196,7 +196,7 @@ export default function AccountPage() {
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                     <Mail className="size-3" /> Email
                   </span>
-                  <p className="text-md font-medium text-muted-foreground">{user?.email || "-"}</p>
+                  <p className="text-md font-medium text-muted-foreground">{user?.primaryEmailAddress?.emailAddress || "-"}</p>
                 </div>
               </CardContent>
             </Card>

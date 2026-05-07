@@ -2,7 +2,7 @@ import * as React from "react"
 import { getDevices } from "@/app/actions/devices"
 import { getBroadcasts } from "@/app/actions/broadcast"
 import { getContacts } from "@/app/actions/contacts"
-import { getLoggedInUser } from "@/app/actions/auth"
+import { currentUser } from "@clerk/nextjs/server"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { 
   Smartphone, 
@@ -21,10 +21,11 @@ export default async function DashboardPage() {
     getDevices(),
     getBroadcasts(),
     getContacts(),
-    getLoggedInUser()
+    currentUser()
   ])
 
-  const userName = user?.name || "User"
+  const userName = user?.firstName || user?.username || "User"
+
   const devices = devicesRes.success ? devicesRes.devices : []
   const broadcasts = broadcastsRes.success ? broadcastsRes.broadcasts : []
   const contacts = contactsRes.success ? contactsRes.contacts : []
@@ -104,7 +105,7 @@ export default async function DashboardPage() {
             <div className="space-y-4">
               {broadcasts.length > 0 ? (
                 broadcasts.slice(0, 5).map((broadcast) => (
-                  <div key={broadcast.$id} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
+                  <div key={broadcast.id} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
                     <div className={`p-2 rounded-full ${
                       broadcast.status === 'completed' ? 'bg-green-100 text-green-600' : 
                       broadcast.status === 'failed' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
@@ -114,7 +115,7 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{broadcast.name || "Broadcast Tanpa Nama"}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(broadcast.$createdAt).toLocaleDateString('id-ID', {
+                      <p className="text-xs text-muted-foreground">{new Date(broadcast.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
@@ -147,7 +148,7 @@ export default async function DashboardPage() {
             <div className="space-y-4">
               {devices.length > 0 ? (
                 devices.map((device) => (
-                  <div key={device.$id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div key={device.id} className="flex items-center justify-between p-3 rounded-lg border">
                     <div className="flex items-center gap-3">
                       <div className={`h-2.5 w-2.5 rounded-full ${device.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                       <span className="text-sm font-medium">{device.name}</span>

@@ -43,14 +43,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 interface Device {
-  $id: string
+  id: string
   name: string
   waName?: string
   status: string
 }
 
 interface Contact {
-  $id: string
+  id: string
   name: string
   phone: string
   tags?: string
@@ -65,7 +65,7 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
   const [formData, setFormData] = React.useState({
-    deviceId: devices[0]?.$id || "",
+    deviceId: devices[0]?.id || "",
     name: "",
     recipients: "",
     message: ""
@@ -82,7 +82,7 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
 
   const handleAddSelected = () => {
     const selectedPhones = contacts
-      .filter(c => selectedContacts.includes(c.$id))
+      .filter(c => selectedContacts.includes(c.id))
       .map(c => c.phone)
       .join("\n")
 
@@ -127,14 +127,14 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
     // Dispatch optimistic event
     const totalRecipients = formData.recipients.split('\n').map(r => r.trim()).filter(Boolean).length
     const optimisticBroadcast = {
-      $id: `temp-${Date.now()}`,
+      id: `temp-${Date.now()}`,
       name: formData.name,
       message: formData.message,
       status: sendOption === 'scheduled' ? 'pending' : 'processing',
       total: totalRecipients,
       sent: 0,
       failed: 0,
-      $createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString()
     }
     window.dispatchEvent(new CustomEvent('optimistic-broadcast', { detail: optimisticBroadcast }))
 
@@ -206,22 +206,22 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
                       ) : (
                         filteredContacts.map((contact) => (
                           <div
-                            key={contact.$id}
+                            key={contact.id}
                             className="flex items-center space-x-3 space-y-0 rounded-lg p-2 hover:bg-muted/50 transition-colors"
                           >
                             <Checkbox
-                              id={contact.$id}
-                              checked={selectedContacts.includes(contact.$id)}
+                              id={contact.id}
+                              checked={selectedContacts.includes(contact.id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedContacts(prev => [...prev, contact.$id])
+                                  setSelectedContacts(prev => [...prev, contact.id])
                                 } else {
-                                  setSelectedContacts(prev => prev.filter(id => id !== contact.$id))
+                                  setSelectedContacts(prev => prev.filter(id => id !== contact.id))
                                 }
                               }}
                             />
                             <label
-                              htmlFor={contact.$id}
+                              htmlFor={contact.id}
                               className="flex-1 grid gap-0.5 cursor-pointer"
                             >
                               <span className="text-sm font-medium leading-none">
@@ -293,7 +293,7 @@ export function BroadcastForm({ devices, contacts }: BroadcastFormProps) {
                 <SelectContent>
                   {connectedDevices.length > 0 ? (
                     connectedDevices.map((device) => (
-                      <SelectItem key={device.$id} value={device.$id}>
+                      <SelectItem key={device.id} value={device.id}>
                         {device.waName || device.name}
                       </SelectItem>
                     ))

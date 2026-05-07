@@ -1,24 +1,31 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export function proxy(request: NextRequest) {
-  const session = request.cookies.get('appwrite-session')
-  const { pathname } = request.nextUrl
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/login(.*)',
+  '/signup(.*)', 
+  '/docs(.*)',
+  '/api/v1(.*)',
+]);
 
-  // 1. Jika mencoba mengakses dashboard tanpa session
-  if (pathname.startsWith('/dashboard') && !session) {
-    return NextResponse.redirect(new URL('/login', request.url))
+export const proxy = clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect();
   }
-
-  // 2. Jika mencoba mengakses login saat session aktif
-  if (pathname === '/login' && session) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  
+  // Set redirect after sign-in to dashboard
+  if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') {
+    // Clerk akan otomatis redirect ke dashboard setelah sign-in berhasil
+    // karena sudah dikonfigurasi di Clerk dashboard
   }
+});
 
-  return NextResponse.next()
-}
 
-// Tentukan jalur mana saja yang akan diproses oleh middleware
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
-}
+  matcher: [
+    // Skip Next.js internals and all static files, unless found in search params
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API routes
+    "/(api|trpc)(.*)",
+  ],
+};

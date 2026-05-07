@@ -20,7 +20,10 @@ export function DashboardHeader() {
         <PageTitle />
       </div>
       <div className="flex-1" />
-      <HeaderActions />
+      <div className="flex items-center gap-4">
+        <HeaderActions />
+      </div>
     </header>
   )
 }
+

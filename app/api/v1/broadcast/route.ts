@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getUserIdByApiKey } from '@/app/actions/profiles';
-import { createAdminClient } from '@/lib/appwrite-server';
-import { Query, ID, Permission, Role } from 'node-appwrite';
+import prisma from '@/lib/prisma';
 import { processBroadcast } from '@/app/actions/broadcast';
+import { Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
     try {
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Missing name, message, or recipients in request body" }, { status: 400 });
         }
 
-        // Parse recipients (bisa array atau string dipisahkan koma/\n)
+        // Parse recipients
         let recipientList: string[] = [];
         if (Array.isArray(recipients)) {
             recipientList = recipients.map(r => String(r).trim()).filter(r => r.length > 0);
@@ -40,74 +40,61 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "No valid recipients provided" }, { status: 400 });
         }
 
-        const { databases } = await createAdminClient();
-
         // Cari deviceId jika tidak disertakan
         let targetDeviceId = deviceId;
         if (!targetDeviceId) {
-            const devices = await databases.listDocuments(
-                process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-                process.env.NEXT_PUBLIC_APPWRITE_DEVICES_COLLECTION_ID!,
-                [
-                    Query.equal("userId", userId),
-                    Query.equal("status", "connected"),
-                    Query.limit(1)
-                ]
-            );
+            const device = await prisma.device.findFirst({
+                where: {
+                    userId: userId,
+                    status: "connected"
+                }
+            });
 
-            if (devices.documents.length === 0) {
+            if (!device) {
                 return NextResponse.json({ success: false, error: "No connected WhatsApp device found for this account" }, { status: 400 });
             }
-            targetDeviceId = devices.documents[0].$id;
+            targetDeviceId = device.id;
+        } else {
+             // Validasi kepemilikan device
+             const device = await prisma.device.findUnique({
+                where: { id: targetDeviceId }
+            });
+            if (!device || device.userId !== userId) {
+                return NextResponse.json({ success: false, error: "Forbidden: Device not found or not owned by you" }, { status: 403 });
+            }
         }
 
-        const DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
-        const COL_ID = process.env.NEXT_PUBLIC_APPWRITE_BROADCASTS_COLLECTION_ID!;
-
         // Format nomor telepon recipients
-        const formattedRecipients = recipientList.map(phone => {
-            const cleanPhone = phone.replace(/\D/g, '');
-            const finalPhone = cleanPhone.startsWith('0') 
-                ? '62' + cleanPhone.slice(1) 
-                : cleanPhone.startsWith('62') 
-                    ? cleanPhone 
-                    : '62' + cleanPhone;
-            return `${finalPhone}@s.whatsapp.net`;
+        const cleanRecipients = recipientList.map(phone => {
+            const clean = phone.replace(/\D/g, '');
+            return clean.startsWith('0') ? '62' + clean.slice(1) : clean.startsWith('62') ? clean : '62' + clean;
         });
 
-        // Buat record broadcast
-        const broadcast = await databases.createDocument(
-            DB_ID,
-            COL_ID,
-            ID.unique(),
-            {
+        const recipientData = cleanRecipients.map(phone => ({ phone, status: "pending" }));
+
+        // Buat record broadcast di Prisma
+        const broadcast = await prisma.broadcast.create({
+            data: {
                 deviceId: targetDeviceId,
                 userId: userId,
                 name: name,
-                title: name,
                 message: message,
-                body: message,
-                recipients: JSON.stringify(formattedRecipients),
+                recipients: recipientData as unknown as Prisma.InputJsonValue,
                 status: "processing",
-                total: formattedRecipients.length,
+                total: recipientData.length,
                 sent: 0,
                 failed: 0,
                 timestamp: Math.floor(Date.now() / 1000)
-            },
-            [
-                Permission.read(Role.user(userId)),
-                Permission.update(Role.user(userId)),
-                Permission.delete(Role.user(userId)),
-            ]
-        );
+            }
+        });
 
         // Jalankan proses broadcast di background
-        processBroadcast(broadcast.$id, targetDeviceId, message, formattedRecipients);
+        processBroadcast(broadcast.id, targetDeviceId, message, cleanRecipients);
 
         return NextResponse.json({ 
             success: true, 
             message: "Broadcast berhasil dibuat dan sedang diproses",
-            broadcastId: broadcast.$id 
+            broadcastId: broadcast.id 
         });
 
     } catch (error) {

@@ -35,13 +35,11 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { client } from "@/lib/appwrite-client"
-import { getAppwriteJWT } from "@/app/actions/auth"
 import { getBroadcasts } from "@/app/actions/broadcast"
 import { RefreshCw } from "lucide-react"
 
 export interface Broadcast {
-  $id: string
+  id: string
   name?: string
   message: string
   status: string
@@ -51,11 +49,11 @@ export interface Broadcast {
   deviceId: string
   recipients?: string
   timestamp?: number
-  $createdAt: string
+  createdAt: string
 }
 
 export interface Device {
-  $id: string
+  id: string
   name: string
   waName?: string
 }
@@ -69,7 +67,6 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
   const [broadcasts, setBroadcasts] = React.useState(initialBroadcasts)
   const [selectedBroadcast, setSelectedBroadcast] = React.useState<Broadcast | null>(null)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const unsubscribeRef = React.useRef<(() => void) | null>(null)
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -86,45 +83,6 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
   }
 
   React.useEffect(() => {
-    async function initRealtime() {
-      // Set JWT agar realtime subscription bisa autentikasi
-      const res = await getAppwriteJWT()
-      if (res.success && res.jwt) {
-        client.setJWT(res.jwt)
-      }
-
-      // Bersihkan subscription lama jika ada
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current()
-      }
-
-      unsubscribeRef.current = client.subscribe(
-        `databases.${process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID}.collections.${process.env.NEXT_PUBLIC_APPWRITE_BROADCASTS_COLLECTION_ID}.documents`,
-        (response) => {
-          const payload = response.payload as Broadcast
-
-          if (response.events.some(e => e.includes("create"))) {
-            setBroadcasts(prev => {
-              if (prev.some(b => b.$id === payload.$id)) return prev
-              const filtered = prev.filter(b => !(b.$id.startsWith('temp-') && b.name === payload.name && b.message === payload.message))
-              return [payload, ...filtered]
-            })
-          } else if (response.events.some(e => e.includes("update"))) {
-            setBroadcasts(prev => prev.map(b => b.$id === payload.$id ? payload : b))
-            // Update selected broadcast if open
-            setSelectedBroadcast(prev => prev?.$id === payload.$id ? payload : prev)
-          } else if (response.events.some(e => e.includes("delete"))) {
-            setBroadcasts(prev => prev.filter(b => b.$id !== payload.$id))
-          }
-        }
-      )
-    }
-
-    initRealtime()
-
-    // Refresh JWT dan re-subscribe setiap 14 menit (JWT Appwrite expire 15 menit)
-    const jwtInterval = setInterval(initRealtime, 14 * 60 * 1000)
-
     // Listener optimistic UI dari BroadcastForm
     const handleOptimistic = (e: Event) => {
       const customEvent = e as CustomEvent<Broadcast>
@@ -133,14 +91,12 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
     window.addEventListener('optimistic-broadcast', handleOptimistic)
 
     return () => {
-      clearInterval(jwtInterval)
-      if (unsubscribeRef.current) unsubscribeRef.current()
       window.removeEventListener('optimistic-broadcast', handleOptimistic)
     }
   }, [])
 
   const getDeviceName = (deviceId: string) => {
-    const device = devices.find(d => d.$id === deviceId)
+    const device = devices.find(d => d.id === deviceId)
     return device ? (device.waName || device.name) : "Device Terhapus"
   }
 
@@ -199,14 +155,14 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
                 </TableRow>
               ) : (
                 broadcasts.map((item) => (
-                  <TableRow key={item.$id} className="group hover:bg-muted/5 transition-all duration-300 border-primary/5">
+                  <TableRow key={item.id} className="group hover:bg-muted/5 transition-all duration-300 border-primary/5">
                     <TableCell className="max-w-[220px]">
                       <div className="flex flex-col gap-1">
                         <span className="font-bold text-sm truncate">{item.name || "Broadcast Tanpa Nama"}</span>
                         <p className="text-xs text-muted-foreground truncate italic">&quot;{item.message}&quot;</p>
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-1 bg-muted/30 w-fit px-1.5 py-0.5 rounded">
                           <Clock className="size-3" />
-                          {formatDistanceToNow(new Date(item.$createdAt), { addSuffix: true, locale: localeID })}
+                          {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: localeID })}
                         </div>
                       </div>
                     </TableCell>
@@ -296,7 +252,7 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
               <div>
                 <DialogTitle className="text-lg font-bold">Detail Broadcast</DialogTitle>
                 <DialogDescription className="text-xs">
-                  ID: <span className="font-mono text-primary/80 uppercase">{selectedBroadcast?.$id}</span>
+                  ID: <span className="font-mono text-primary/80 uppercase">{selectedBroadcast?.id}</span>
                 </DialogDescription>
               </div>
             </div>
@@ -312,10 +268,10 @@ export function BroadcastHistory({ broadcasts: initialBroadcasts, devices }: Bro
                     <span className="text-[10px] font-bold uppercase tracking-wider">Waktu</span>
                   </div>
                   <p className="text-sm font-bold">
-                    {format(new Date(selectedBroadcast.$createdAt), "PPP", { locale: localeID })}
+                    {format(new Date(selectedBroadcast.createdAt), "PPP", { locale: localeID })}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    {format(new Date(selectedBroadcast.$createdAt), "HH:mm:ss")}
+                    {format(new Date(selectedBroadcast.createdAt), "HH:mm:ss")}
                   </p>
                 </div>
                 <div className="bg-muted/30 p-3 rounded-xl border border-primary/5 space-y-1">

@@ -28,11 +28,11 @@ import {
 } from "@/components/ui/alert-dialog"
 
 interface Contact {
-  $id: string
+  id: string
   name: string
   phone: string
   tags: string
-  $createdAt: string
+  createdAt: string
 }
 
 interface ContactListProps {
@@ -69,7 +69,7 @@ export function ContactList({ contacts }: ContactListProps) {
             </TableRow>
           ) : (
             contacts.map((contact) => (
-              <TableRow key={contact.$id}>
+              <TableRow key={contact.id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -117,7 +117,7 @@ export function ContactList({ contacts }: ContactListProps) {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction 
-                          onClick={() => handleDelete(contact.$id)}
+                          onClick={() => handleDelete(contact.id)}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           Hapus

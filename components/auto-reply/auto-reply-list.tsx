@@ -28,16 +28,16 @@ import {
 } from "@/components/ui/alert-dialog"
 
 interface AutoReply {
-  $id: string
+  id: string
   keyword: string
   response: string
   type: "exact" | "contains"
   deviceId: string
-  $createdAt: string
+  createdAt: string
 }
 
 interface Device {
-  $id: string
+  id: string
   name: string
   waName?: string
 }
@@ -64,7 +64,7 @@ export function AutoReplyList({ replies: initialReplies, devices }: AutoReplyLis
       if (action === 'create') {
         setReplies(prev => [data, ...prev])
       } else if (action === 'update') {
-        setReplies(prev => prev.map(r => r.$id === data.$id ? data : r))
+        setReplies(prev => prev.map(r => r.id === data.id ? data : r))
       }
     }
     
@@ -74,7 +74,7 @@ export function AutoReplyList({ replies: initialReplies, devices }: AutoReplyLis
 
   async function handleDelete(id: string) {
     // Optimistic delete
-    setReplies(prev => prev.filter(r => r.$id !== id))
+    setReplies(prev => prev.filter(r => r.id !== id))
     
     const res = await deleteAutoReply(id)
     if (res.success) {
@@ -86,7 +86,7 @@ export function AutoReplyList({ replies: initialReplies, devices }: AutoReplyLis
   }
 
   function getDeviceName(id: string) {
-    const device = devices.find(d => d.$id === id)
+    const device = devices.find(d => d.id === id)
     return device ? (device.waName || device.name) : "Unknown Device"
   }
 
@@ -111,7 +111,7 @@ export function AutoReplyList({ replies: initialReplies, devices }: AutoReplyLis
             </TableRow>
           ) : (
             replies.map((reply) => (
-              <TableRow key={reply.$id}>
+              <TableRow key={reply.id}>
                 <TableCell>
                   <div className="flex items-center gap-2 text-sm">
                     <Smartphone className="size-3.5 text-muted-foreground" />
@@ -152,7 +152,7 @@ export function AutoReplyList({ replies: initialReplies, devices }: AutoReplyLis
                       <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction 
-                          onClick={() => handleDelete(reply.$id)}
+                          onClick={() => handleDelete(reply.id)}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           Hapus

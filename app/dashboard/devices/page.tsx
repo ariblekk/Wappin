@@ -8,9 +8,9 @@ import { getDevices } from "@/app/actions/devices"
 import { AddDeviceButton } from "@/components/devices/add-device-button"
 import { DeleteDeviceButton } from "@/components/devices/delete-device-button"
 import { DeviceActionButton } from "@/components/devices/device-action-button"
-import { Models } from "node-appwrite"
 
-interface Device extends Models.Document {
+interface Device {
+  id: string
   name: string
   status: string
   qr?: string
@@ -54,7 +54,7 @@ export default async function DevicesPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {devices.map((device: Device) => (
-            <Card key={device.$id} className="overflow-hidden border-2 border-primary/5 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={device.id} className="overflow-hidden border-2 border-primary/5 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="p-6 pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex gap-4">
@@ -70,7 +70,7 @@ export default async function DevicesPage() {
                           {device.phone && <Badge variant="outline" className="text-[10px] h-4 px-1">{device.phone}</Badge>}
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground font-mono uppercase">{device.$id}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono uppercase">{device.id}</p>
                     </div>
                   </div>
                   <Badge className={`
@@ -92,14 +92,14 @@ export default async function DevicesPage() {
               </CardContent>
               <CardFooter className="p-6 pt-4 flex gap-2">
                 <DeviceActionButton
-                  deviceId={device.$id}
+                  deviceId={device.id}
                   deviceName={device.name}
                   status={device.status}
                 />
                 <Button variant="outline" size="sm" className="h-9 px-3 gap-1.5" asChild>
-                  <Link href={`/dashboard/devices/${device.$id}`}>Detail</Link>
+                  <Link href={`/dashboard/devices/${device.id}`}>Detail</Link>
                 </Button>
-                <DeleteDeviceButton deviceId={device.$id} deviceName={device.name} />
+                <DeleteDeviceButton deviceId={device.id} deviceName={device.name} />
               </CardFooter>
             </Card>
           ))}
