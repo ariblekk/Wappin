@@ -14,7 +14,7 @@ interface ProfileData {
   id: string;
   user_code: string;
   plan: string;
-  apikey: string;
+  apiKey: string;
 }
 
 export default function AccountPage() {
@@ -81,7 +81,7 @@ export default function AccountPage() {
     setRegenLoading(true)
     const res = await regenerateApiKey()
     if (res.success && res.apiKey) {
-      setProfile((prev) => prev ? { ...prev, apikey: res.apiKey! } : null)
+      setProfile((prev) => prev ? { ...prev, apiKey: res.apiKey! } : null)
       toast.success("API Key berhasil diperbarui!")
     } else {
       toast.error("Gagal memperbarui API Key")
@@ -268,13 +268,13 @@ export default function AccountPage() {
                 <Input
                   type="password"
                   readOnly
-                  value={profile?.apikey || ""}
+                  value={profile?.apiKey || ""}
                   className="font-mono bg-muted/50 flex-1 text-xs"
                 />
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => copyToClipboard(profile?.apikey || "")}
+                    onClick={() => copyToClipboard(profile?.apiKey || "")}
                     className="flex-1 sm:flex-none gap-2"
                   >
                     <Copy className="size-4" />

@@ -29,6 +29,8 @@ model Device {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sessions    WaSession[]
+
   @@index([userId])
 }
 
@@ -44,6 +46,21 @@ model Contact {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model WaSession {
+  id        String   @id @default(cuid())
+  deviceId  String
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  dataType  String   // 'creds' or 'keys'
+  dataId    String   // e.g. 'pre-key-1'
+  content   String   @db.Text // JSON serialized content
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, dataType, dataId])
+  @@index([deviceId])
 }
 
 model AutoReply {

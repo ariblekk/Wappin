@@ -59,14 +59,13 @@ export function HeaderActions() {
     return (
       <div className="flex items-center gap-2 ml-auto">
         <Button
-          size="sm"
-          className="h-9 gap-2"
+          className="gap-2"
           onClick={() => setIsTestOpen(true)}
         >
           <Send className="size-4" />
           Test Kirim
         </Button>
-        <Button variant="outline" size="sm" className="h-9 gap-1.5" asChild>
+        <Button variant="outline" className="gap-1.5" asChild>
           <Link href="/dashboard/devices">
             <ArrowLeft className="size-4" />
             Kembali
@@ -90,7 +89,6 @@ export function HeaderActions() {
     return (
       <div className="flex items-center gap-2 ml-auto">
         <Button
-          size="sm"
           className="gap-2 shadow-sm"
           onClick={() => setIsAddDeviceOpen(true)}
         >

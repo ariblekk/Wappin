@@ -44,7 +44,6 @@ export async function createDevice(name: string) {
             }
         });
 
-        revalidatePath("/dashboard/devices");
         return { success: true, deviceId: device.id };
     } catch (error) {
         console.error("Error creating device:", error);
@@ -147,4 +146,3 @@ export async function getDeviceMessages(deviceId: string) {
         return { success: false, messages: [] };
     }
 }
-

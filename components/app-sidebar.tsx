@@ -12,15 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  LayoutGrid, 
-  MessageSquare, 
-  Radio, 
-  Undo2, 
-  Clock, 
-  Fingerprint, 
-  Wrench, 
-  Search, 
+import {
+  LayoutGrid,
+  MessageSquare,
+  Radio,
+  Undo2,
+  Wrench,
+  Search,
   Users,
   ChevronsUpDown,
   LogOut,
@@ -82,16 +80,6 @@ const data = {
           url: "/dashboard/auto-reply",
           icon: Undo2,
         },
-        {
-          title: "Reminder",
-          url: "/dashboard/reminder",
-          icon: Clock,
-        },
-        {
-          title: "OTP Service",
-          url: "/dashboard/otp",
-          icon: Fingerprint,
-        },
       ],
     },
     {
@@ -99,7 +87,7 @@ const data = {
       items: [
         {
           title: "Tools",
-          url: "/dashboard/tools",
+          url: "#",
           icon: Wrench,
         },
       ],
@@ -213,14 +201,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
-                  <Link href="/dashboard/tools" className="flex items-center gap-2">
+                  <Link href="#" className="flex items-center gap-2">
                     <Settings className="size-4" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2" />
-                <DropdownMenuItem 
-                  onClick={() => signOut()} 
+                <DropdownMenuItem
+                  onClick={() => signOut()}
                   className="rounded-lg cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                 >
                   <LogOut className="size-4 mr-2" />

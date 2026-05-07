@@ -54,8 +54,7 @@ export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
       setConnectedDevice(res.device as unknown as Device)
     }
     setStep("success")
-    router.refresh()
-  }, [router])
+  }, [])
 
 
 
@@ -84,7 +83,10 @@ export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
         }
       }, 2000)
 
-      await initiateWhatsApp(newDeviceId)
+      const initRes = await initiateWhatsApp(newDeviceId)
+      if (!initRes.success) {
+        alert("Gagal memulai koneksi WhatsApp: " + initRes.error)
+      }
       
       setTimeout(() => {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
@@ -106,8 +108,8 @@ export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
 
   const handleClose = () => {
     onOpenChange(false)
-    router.refresh()
     reset()
+    router.refresh()
   }
 
   React.useEffect(() => {
@@ -120,13 +122,20 @@ export function AddDeviceDialog({ open, onOpenChange }: AddDeviceDialogProps) {
     <Dialog open={open} onOpenChange={(val) => {
       if (!val) { 
         onOpenChange(false); 
-        router.refresh();
         reset(); 
       }
       else onOpenChange(val)
     }}>
 
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onPointerDownOutside={(e) => {
+          if (step === "qr") e.preventDefault()
+        }}
+        onEscapeKeyDown={(e) => {
+          if (step === "qr") e.preventDefault()
+        }}
+      >
 
         {/* ── Step: Input ─────────────────────────────── */}
         {step === "input" && (

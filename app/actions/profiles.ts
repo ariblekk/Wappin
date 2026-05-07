@@ -19,11 +19,14 @@ export async function getProfile() {
 
         // Jika belum ada, buat profil default
         const apiKey = `wappin_${crypto.randomBytes(16).toString("hex")}`;
+        const userCode = `WPIN-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+        
         profile = await prisma.profile.create({
             data: {
                 userId: userId,
                 plan: "Free",
-                apiKey: apiKey
+                apiKey: apiKey,
+                user_code: userCode
             }
         });
 
@@ -40,6 +43,7 @@ export async function regenerateApiKey() {
         if (!userId) throw new Error("Unauthorized");
 
         const newApiKey = `wappin_${crypto.randomBytes(16).toString("hex")}`;
+        const userCode = `WPIN-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
 
         const profile = await prisma.profile.upsert({
             where: { userId: userId },
@@ -47,7 +51,8 @@ export async function regenerateApiKey() {
             create: {
                 userId: userId,
                 plan: "Free",
-                apiKey: newApiKey
+                apiKey: newApiKey,
+                user_code: userCode
             }
         });
 
