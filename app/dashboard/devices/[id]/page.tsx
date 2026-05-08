@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+export const dynamic = 'force-dynamic';
 import { getDevice, getDeviceMessages } from "@/app/actions/devices"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
