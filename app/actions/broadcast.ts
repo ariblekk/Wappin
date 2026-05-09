@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { sendMessage } from "@/lib/whatsapp";
 import { Prisma } from "@prisma/client";
 
@@ -12,7 +12,8 @@ interface Recipient {
 
 export async function getBroadcasts() {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const broadcasts = await prisma.broadcast.findMany({
@@ -36,7 +37,8 @@ export async function createBroadcast(formData: {
     scheduleTime?: string;
 }) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const recipientList = formData.recipients

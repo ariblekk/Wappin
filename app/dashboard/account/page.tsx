@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import { getProfile, regenerateApiKey } from "@/app/actions/profiles"
-import { useUser } from "@clerk/nextjs"
+import { updateUserProfile } from "@/app/actions/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +20,11 @@ interface ProfileData {
 }
 
 export default function AccountPage() {
-  const { isLoaded, user, isSignedIn } = useUser()
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const isLoaded = status !== "loading"
+  const isSignedIn = !!session
+  const user = session?.user
   const [profile, setProfile] = React.useState<ProfileData | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [regenLoading, setRegenLoading] = React.useState(false)
@@ -28,7 +34,7 @@ export default function AccountPage() {
 
   React.useEffect(() => {
     if (isLoaded && isSignedIn && !newName && !loading) {
-        setTimeout(() => setNewName(user?.firstName || user?.username || ""), 0)
+        setTimeout(() => setNewName(user?.name || ""), 0)
     }
   }, [isLoaded, isSignedIn, user, newName, loading])
 
@@ -61,11 +67,14 @@ export default function AccountPage() {
     
     setUpdateLoading(true)
     try {
-        await user?.update({
-            firstName: newName,
-        })
-        setIsEditingName(false)
-        toast.success("Nama berhasil diperbarui!")
+        const res = await updateUserProfile(newName)
+        if (res.success) {
+            setIsEditingName(false)
+            toast.success("Nama berhasil diperbarui!")
+            router.refresh()
+        } else {
+            toast.error(res.error || "Gagal memperbarui nama")
+        }
     } catch {
         toast.error("Gagal memperbarui nama")
     } finally {
@@ -165,7 +174,7 @@ export default function AccountPage() {
                           className="h-6 px-2 text-red-600 hover:text-red-600 hover:bg-red-100"
                           onClick={() => {
                             setIsEditingName(false)
-                            setNewName(user?.fullName || "")
+                            setNewName(user?.name || "")
                           }}
                           disabled={updateLoading}
                         >
@@ -175,7 +184,7 @@ export default function AccountPage() {
                     )}
                   </div>
                   {!isEditingName ? (
-                    <p className="text-md font-bold">{user?.fullName || "User"}</p>
+                    <p className="text-md font-bold">{user?.name || "User"}</p>
                   ) : (
                     <Input 
                       value={newName}
@@ -186,7 +195,7 @@ export default function AccountPage() {
                         if (e.key === 'Enter') handleUpdateName()
                         if (e.key === 'Escape') {
                           setIsEditingName(false)
-                          setNewName(user?.fullName || "")
+                          setNewName(user?.name || "")
                         }
                       }}
                     />
@@ -196,7 +205,7 @@ export default function AccountPage() {
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                     <Mail className="size-3" /> Email
                   </span>
-                  <p className="text-md font-medium text-muted-foreground">{user?.primaryEmailAddress?.emailAddress || "-"}</p>
+                  <p className="text-md font-medium text-muted-foreground">{user?.email || "-"}</p>
                 </div>
               </CardContent>
             </Card>

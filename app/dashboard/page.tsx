@@ -2,7 +2,7 @@ import * as React from "react"
 import { getDevices } from "@/app/actions/devices"
 import { getBroadcasts } from "@/app/actions/broadcast"
 import { getContacts } from "@/app/actions/contacts"
-import { currentUser } from "@clerk/nextjs/server"
+import { auth } from "@/auth"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { 
   Smartphone, 
@@ -17,14 +17,15 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const [devicesRes, broadcastsRes, contactsRes, user] = await Promise.all([
+  const [devicesRes, broadcastsRes, contactsRes, session] = await Promise.all([
     getDevices(),
     getBroadcasts(),
     getContacts(),
-    currentUser()
+    auth()
   ])
 
-  const userName = user?.firstName || user?.username || "User"
+  const user = session?.user
+  const userName = user?.name || "User"
 
   const devices = devicesRes.success ? devicesRes.devices : []
   const broadcasts = broadcastsRes.success ? broadcastsRes.broadcasts : []

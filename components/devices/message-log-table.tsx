@@ -10,7 +10,8 @@ import { getDeviceMessages } from "@/app/actions/devices"
 export interface MessageDocument {
   id: string
   to: string
-  body: string
+  text?: string
+  body?: string
   status: string
   deviceId: string
   sentAt?: string
@@ -24,6 +25,17 @@ interface MessageLogTableProps {
 export function MessageLogTable({ initialMessages, deviceId }: MessageLogTableProps) {
   const [messages, setMessages] = React.useState<MessageDocument[]>(initialMessages)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
+
+  const getMessageText = React.useCallback((msg: MessageDocument) => {
+    return msg.text ?? msg.body ?? ""
+  }, [])
+
+  const getStatusLabel = React.useCallback((status: string) => {
+    if (status === "sent") return "Terkirim"
+    if (status === "failed") return "Gagal"
+    if (status === "received") return "Masuk"
+    return "Pending"
+  }, [])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -126,8 +138,11 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
             {messages.map((msg) => (
               <tr key={msg.id} className="hover:bg-muted/10 transition-colors">
                 <td className="py-3 px-4 font-mono font-semibold text-foreground/80">+{msg.to}</td>
-                <td className="py-3 px-4 max-w-[200px] sm:max-w-xs truncate text-muted-foreground" title={msg.body}>
-                  {msg.body}
+                <td
+                  className="py-3 px-4 max-w-[200px] sm:max-w-xs truncate text-muted-foreground"
+                  title={getMessageText(msg)}
+                >
+                  {getMessageText(msg)}
                 </td>
                 <td className="py-3 px-4">
                   <Badge
@@ -135,7 +150,9 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
                       ? "bg-green-50 text-green-700 border-green-200"
                       : msg.status === "failed"
                         ? "bg-red-50 text-red-700 border-red-200"
-                        : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                        : msg.status === "received"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
                       }`}
                   >
                     <span
@@ -143,10 +160,12 @@ export function MessageLogTable({ initialMessages, deviceId }: MessageLogTablePr
                         ? "bg-green-600"
                         : msg.status === "failed"
                           ? "bg-red-500"
-                          : "bg-yellow-500"
+                          : msg.status === "received"
+                            ? "bg-blue-500"
+                            : "bg-yellow-500"
                         }`}
                     />
-                    {msg.status === "sent" ? "Terkirim" : msg.status === "failed" ? "Gagal" : "Pending"}
+                    {getStatusLabel(msg.status)}
                   </Badge>
                 </td>
                 <td className="py-3 px-4 text-xs text-muted-foreground font-medium">

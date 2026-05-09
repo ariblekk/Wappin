@@ -78,17 +78,16 @@ export function TestMessageDialog({
       for (let i = 0; i < count; i++) {
         // Dispatch optimistic message event
         const tempId = `temp-${Date.now()}-${i}`
-        const optimisticMsg = {
+        window.dispatchEvent(new CustomEvent('optimistic-message', {
           detail: {
-            $id: tempId,
+            id: tempId,
             to: to.replace(/[^0-9]/g, ''),
-            body: message,
+            text: message,
             status: 'pending',
             deviceId: deviceId,
             sentAt: new Date().toISOString()
           }
-        }
-        window.dispatchEvent(new CustomEvent('optimistic-message', optimisticMsg))
+        }))
 
         const res = await sendTestMessage(deviceId, to, message)
         if (res.success) {

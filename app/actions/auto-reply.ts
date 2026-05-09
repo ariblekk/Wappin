@@ -1,12 +1,13 @@
 "use server"
 
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
 export async function getAutoReplies() {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const replies = await prisma.autoReply.findMany({
@@ -29,7 +30,8 @@ export async function createAutoReply(data: {
     deviceId: string;
 }) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         await prisma.autoReply.create({
@@ -57,7 +59,8 @@ export async function updateAutoReply(id: string, data: {
     deviceId: string;
 }) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         await prisma.autoReply.update({
@@ -80,7 +83,8 @@ export async function updateAutoReply(id: string, data: {
 
 export async function deleteAutoReply(id: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         await prisma.autoReply.delete({

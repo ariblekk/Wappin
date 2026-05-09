@@ -2,7 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 
-import { currentUser } from "@clerk/nextjs/server"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 
 export default async function DashboardLayout({
@@ -10,9 +10,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const user = await currentUser()
+  const session = await auth()
 
-  if (!user) {
+  if (!session) {
     redirect("/login")
   }
 

@@ -4,10 +4,12 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GalleryVerticalEndIcon } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 
 export function Navbar() {
-    const { isLoaded, isSignedIn } = useUser();
+    const { data: session, status } = useSession();
+    const isLoaded = status !== "loading";
+    const isSignedIn = !!session;
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

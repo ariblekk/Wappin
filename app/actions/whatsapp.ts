@@ -1,12 +1,13 @@
 "use server"
 
 import { connectToWhatsApp, sendMessage } from "@/lib/whatsapp";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 export async function initiateWhatsApp(deviceId: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         // Pastikan device ini memang milik user tersebut
@@ -32,7 +33,8 @@ export async function initiateWhatsApp(deviceId: string) {
 
 export async function sendTestMessage(deviceId: string, to: string, text: string): Promise<{ success: true } | { success: false, error: string }> {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const device = await prisma.device.findUnique({

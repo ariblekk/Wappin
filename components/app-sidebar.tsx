@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { useUser, useClerk } from "@clerk/nextjs"
+import { useSession, signOut } from "next-auth/react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,13 +17,11 @@ import {
   MessageSquare,
   Radio,
   Undo2,
-  Wrench,
   Search,
   Users,
   ChevronsUpDown,
   LogOut,
   User as UserIcon,
-  Settings
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -82,23 +80,13 @@ const data = {
         },
       ],
     },
-    {
-      title: "Lainnya",
-      items: [
-        {
-          title: "Tools",
-          url: "#",
-          icon: Wrench,
-        },
-      ],
-    },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user } = useUser()
-  const { signOut } = useClerk()
+  const { data: session } = useSession()
+  const user = session?.user
 
   return (
     <Sidebar variant="floating" {...props}>
@@ -161,14 +149,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground h-auto p-2 bg-muted/30 border border-primary/5 hover:bg-muted/50 transition-colors"
                 >
                   <Avatar className="h-8 w-8 rounded-lg border border-primary/10">
-                    <AvatarImage src={user?.imageUrl} alt={user?.fullName || ""} />
+                    <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
                     <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
-                      {(user?.firstName || "U").charAt(0).toUpperCase()}
+                      {(user?.name || "U").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight ml-2 overflow-hidden">
-                    <span className="truncate font-bold">{user?.fullName || user?.username || "User"}</span>
-                    <span className="truncate text-[10px] text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</span>
+                    <span className="truncate font-bold">{user?.name || "User"}</span>
+                    <span className="truncate text-[10px] text-muted-foreground">{user?.email}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/50" />
                 </SidebarMenuButton>
@@ -182,14 +170,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-3 px-2 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={user?.imageUrl} alt={user?.fullName || ""} />
+                      <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
                       <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
-                        {(user?.firstName || "U").charAt(0).toUpperCase()}
+                        {(user?.name || "U").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-bold">{user?.fullName || user?.username}</span>
-                      <span className="truncate text-xs text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</span>
+                      <span className="truncate font-bold">{user?.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
@@ -198,12 +186,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Link href="/dashboard/account" className="flex items-center gap-2">
                     <UserIcon className="size-4" />
                     <span>Akun & Profil</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
-                  <Link href="#" className="flex items-center gap-2">
-                    <Settings className="size-4" />
-                    <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2" />

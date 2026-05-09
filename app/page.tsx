@@ -8,10 +8,12 @@ import { cn } from "@/lib/utils"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
 import { Card } from "@/components/ui/card"
-import { useUser } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 
 export default function LandingPage() {
-  const { isLoaded, isSignedIn } = useUser()
+  const { data: session, status } = useSession()
+  const isLoaded = status !== "loading"
+  const isSignedIn = !!session
   return (
     <div className="min-h-screen">
       {/* Navigation */}

@@ -1,31 +1,23 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { auth } from "@/auth"
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/login(.*)',
-  '/signup(.*)', 
-  '/docs(.*)',
-  '/api/v1(.*)',
-]);
+export const proxy = auth((req) => {
+  const isPublicRoute = 
+    req.nextUrl.pathname === "/" || 
+    req.nextUrl.pathname.startsWith("/login") || 
+    req.nextUrl.pathname.startsWith("/signup") ||
+    req.nextUrl.pathname.startsWith("/docs") ||
+    req.nextUrl.pathname.startsWith("/api/auth") ||
+    req.nextUrl.pathname.startsWith("/api/v1");
 
-export const proxy = clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  if (!req.auth && !isPublicRoute) {
+    const newUrl = new URL("/login", req.nextUrl.origin);
+    return Response.redirect(newUrl);
   }
-  
-  // Set redirect after sign-in to dashboard
-  if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') {
-    // Clerk akan otomatis redirect ke dashboard setelah sign-in berhasil
-    // karena sudah dikonfigurasi di Clerk dashboard
-  }
-});
-
+})
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };

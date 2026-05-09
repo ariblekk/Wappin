@@ -1,12 +1,13 @@
 "use server"
 
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import crypto from "crypto";
 
 export async function getProfile() {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         let profile = await prisma.profile.findUnique({
@@ -39,7 +40,8 @@ export async function getProfile() {
 
 export async function regenerateApiKey() {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const newApiKey = `wappin_${crypto.randomBytes(16).toString("hex")}`;

@@ -1,13 +1,14 @@
 "use server"
 
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { disconnectWhatsApp } from "@/lib/whatsapp";
 import { revalidatePath } from "next/cache";
 
 export async function getDevices() {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const devices = await prisma.device.findMany({
@@ -33,7 +34,8 @@ export async function getDevices() {
 
 export async function createDevice(name: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const device = await prisma.device.create({
@@ -53,7 +55,8 @@ export async function createDevice(name: string) {
 
 export async function deleteDevice(deviceId: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const device = await prisma.device.findUnique({
@@ -81,7 +84,8 @@ export async function deleteDevice(deviceId: string) {
 
 export async function getDevice(deviceId: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const device = await prisma.device.findUnique({
@@ -101,7 +105,8 @@ export async function getDevice(deviceId: string) {
 
 export async function disconnectDevice(deviceId: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const device = await prisma.device.findUnique({
@@ -131,7 +136,8 @@ export async function disconnectDevice(deviceId: string) {
 
 export async function getDeviceMessages(deviceId: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const messages = await prisma.message.findMany({

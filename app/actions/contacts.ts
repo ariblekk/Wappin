@@ -1,12 +1,13 @@
 "use server"
 
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
 export async function getContacts() {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const contacts = await prisma.contact.findMany({
@@ -23,7 +24,8 @@ export async function getContacts() {
 
 export async function createContact(data: { name: string; phone: string; tags?: string }) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const cleanPhone = data.phone.replace(/[^0-9]/g, '');
@@ -47,7 +49,8 @@ export async function createContact(data: { name: string; phone: string; tags?: 
 
 export async function updateContact(id: string, data: { name: string; phone: string; tags?: string }) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         const cleanPhone = data.phone.replace(/[^0-9]/g, '');
@@ -71,7 +74,8 @@ export async function updateContact(id: string, data: { name: string; phone: str
 
 export async function deleteContact(contactId: string) {
     try {
-        const { userId } = await auth();
+        const session = await auth();
+        const userId = session?.user?.id;
         if (!userId) throw new Error("Unauthorized");
 
         await prisma.contact.delete({
