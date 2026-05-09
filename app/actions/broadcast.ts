@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { sendMessage } from "@/lib/whatsapp";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 interface Recipient {
     phone: string;
